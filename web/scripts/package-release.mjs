@@ -88,6 +88,16 @@ if (windows) {
   writeFileSync(path.join(out, 'Start Six.cmd'), `@echo off\r
 title Six\r
 cd /d "%~dp0"\r
+rem Opened from inside the zip, Windows unpacks only this file, so nothing else is next to it.\r
+if not exist "%~dp0node\\node.exe" (\r
+  echo Six can't find its files. This usually means it was opened from inside the zip.\r
+  echo.\r
+  echo Right-click the zip, choose "Extract All...", then open the extracted Six folder\r
+  echo and double-click "Start Six.cmd" there.\r
+  echo.\r
+  pause\r
+  exit /b 1\r
+)\r
 set "SIX_ENGINE=%~dp0engine\\sixengine.exe"\r
 curl -s -o nul -m 2 http://localhost:6600/api/info && (\r
   start "" http://localhost:6600\r
@@ -125,7 +135,7 @@ writeFileSync(path.join(out, 'README.txt'), `Six ${version}: hex tic-tac-toe wit
 https://github.com/CixMango/Six
 
 Start: ${windows
-  ? 'double-click "Start Six.cmd". Your browser opens at http://localhost:6600.\nKeep the black window open while you play; close it to stop Six.'
+  ? 'extract the zip first (right-click it, Extract All), then double-click "Start Six.cmd"\nin the extracted folder. Your browser opens at http://localhost:6600.\nKeep the black window open while you play; close it to stop Six.'
   : 'run ./start-six.sh. Your browser opens at http://localhost:6600.\nKeep the terminal open while you play; Ctrl+C stops Six.'}
 
 ${gpu}, with network generation ${Number(generation)}.
