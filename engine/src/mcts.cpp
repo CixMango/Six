@@ -25,7 +25,6 @@ constexpr std::uint8_t kTerminal = 3;
 constexpr std::uint8_t kDead = 4;  // the board refused the stone (only at the window edge)
 constexpr std::size_t kMaxNodes = 6'000'000;
 constexpr int kLeafThreatTurns = 2;
-constexpr int kRootThreatTurns = 8;
 constexpr int kCacheChildren = 64;
 
 struct Node {
@@ -133,6 +132,8 @@ bool MctsParams::set(const std::string& name, std::int64_t value) {
   else if (name == "maxChildren") maxChildren = static_cast<int>(std::clamp<std::int64_t>(value, 1, 400));
   else if (name == "leafThreatNodes") leafThreatNodes = value;
   else if (name == "rootThreatNodes") rootThreatNodes = value;
+  else if (name == "rootThreatTurns") rootThreatTurns = static_cast<int>(std::clamp<std::int64_t>(value, 1, 40));
+  else if (name == "rootSolverShare") rootSolverShare = static_cast<int>(std::clamp<std::int64_t>(value, 1, 90));
   else if (name == "secondStoneShare") secondStoneShare = static_cast<int>(std::clamp<std::int64_t>(value, 0, 90));
   else if (name == "cacheEntries") cacheEntries = std::clamp<std::int64_t>(value, 0, std::int64_t{1} << 24);
   else if (name == "reuseTree") reuseTree = value != 0;
@@ -147,6 +148,8 @@ std::vector<std::pair<std::string, std::int64_t>> MctsParams::list() const {
           {"maxChildren", maxChildren},
           {"leafThreatNodes", leafThreatNodes},
           {"rootThreatNodes", rootThreatNodes},
+          {"rootThreatTurns", rootThreatTurns},
+          {"rootSolverShare", rootSolverShare},
           {"secondStoneShare", secondStoneShare},
           {"cacheEntries", cacheEntries},
           {"reuseTree", reuseTree ? 1 : 0}};
@@ -453,7 +456,7 @@ struct Mcts::Impl {
     leaves.clear();
     maxDepth = 0;
     nodes.push_back(Node{});
-    const Tactics tactics = analyze(board, solver, params.rootThreatNodes, kRootThreatTurns);
+    const Tactics tactics = analyze(board, solver, params.rootThreatNodes, params.rootThreatTurns);
     if (tactics.terminal && tactics.value > 0.0f) {
       choice.move = tactics.winning.front();
       choice.value = 1.0f;
@@ -629,8 +632,8 @@ SearchResult Mcts::search(const Board& position, const SearchLimits& limits, con
 
   const auto total = limits.moveTimeMs >= 0 ? std::chrono::milliseconds(limits.moveTimeMs) : std::chrono::milliseconds(24 * 3600 * 1000);
   s.deadline = started + total;
-  // The root's threat search may take at most a quarter of the turn.
-  const Tactics rootTactics = analyze(s.board, s.solver, s.params.rootThreatNodes, kRootThreatTurns, started + total / 4);
+  const Tactics rootTactics = analyze(s.board, s.solver, s.params.rootThreatNodes, s.params.rootThreatTurns,
+                                      started + total * s.params.rootSolverShare / 100);
   if (rootTactics.terminal && rootTactics.value > 0.0f) {
     result.stones = rootTactics.winning;
     if (static_cast<int>(result.stones.size()) > s.board.stonesLeft()) result.stones.resize(static_cast<std::size_t>(s.board.stonesLeft()));

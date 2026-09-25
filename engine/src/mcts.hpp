@@ -24,6 +24,8 @@ struct MctsParams {
   int maxChildren = 40;                 // top cells by prior
   std::int64_t leafThreatNodes = 64;    // threat-solver budget per new leaf (0: off)
   std::int64_t rootThreatNodes = 20'000;
+  int rootThreatTurns = 8;              // how deep the root threat search looks, in turns
+  int rootSolverShare = 25;             // percent of the turn the root threat search may use
   int secondStoneShare = 25;            // percent of the turn spent re-searching after the first stone
   std::int64_t cacheEntries = 1 << 15;  // expansion cache, rounded down to a power of two (0: off)
   bool reuseTree = true;
