@@ -14,6 +14,7 @@ From [Releases](https://github.com/CixMango/Six/releases):
 
 - **Windows:** `Six-<version>-windows-x64.zip`. Unzip it anywhere and double-click `Start Six.cmd`. Runs the bot on any DirectX 12 GPU (NVIDIA, AMD or Intel).
 - **Linux:** `Six-<version>-linux-x64.tar.gz`. Extract it and run `./start-six.sh`. Runs the bot on AMD, Intel and NVIDIA graphics cards (through Vulkan; NVIDIA uses CUDA instead when CUDA 12 and cuDNN 9 are installed), and on the CPU if there's no usable card.
+- **macOS (Apple Silicon):** `Six-<version>-macos-arm64.zip`. Unzip it, then right-click `Start Six.command` and choose **Open** (needed once, since the app isn't from the App Store). Runs the bot on the Mac's GPU through Metal.
 
 Nothing else to install. The download runs the native engine with the newest network, so at the same thinking time it searches far more than the browser version, and you can give it up to 45 s a turn.
 

@@ -12,6 +12,8 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#elif defined(__APPLE__)
+#include <mach-o/dyld.h>
 #endif
 
 #include <onnxruntime_cxx_api.h>
@@ -40,6 +42,13 @@ std::filesystem::path executableDir() {
   wchar_t buffer[MAX_PATH];
   const DWORD size = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
   return std::filesystem::path(std::wstring(buffer, size)).parent_path();
+#elif defined(__APPLE__)
+  std::uint32_t size = 0;
+  _NSGetExecutablePath(nullptr, &size);
+  std::string buffer(size, '\0');
+  _NSGetExecutablePath(buffer.data(), &size);
+  std::error_code error;
+  return std::filesystem::weakly_canonical(buffer.c_str(), error).parent_path();
 #else
   std::error_code error;
   return std::filesystem::read_symlink("/proc/self/exe", error).parent_path();
@@ -50,6 +59,8 @@ std::filesystem::path executableDir() {
 bool appendWebGpu(Ort::Env& env, Ort::SessionOptions& options) {
 #ifdef _WIN32
   const auto library = executableDir() / "onnxruntime_providers_webgpu.dll";
+#elif defined(__APPLE__)
+  const auto library = executableDir() / "libonnxruntime_providers_webgpu.dylib";
 #else
   const auto library = executableDir() / "libonnxruntime_providers_webgpu.so";
 #endif

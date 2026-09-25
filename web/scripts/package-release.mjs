@@ -3,7 +3,7 @@
 //
 //   node scripts/package-release.mjs --net ../runs/rl/gen-0455/net.onnx [--version 1.0.0]
 //
-// Windows needs the DirectML engine first (engine\build.cmd dml); Linux the CUDA one (cmake --preset linux, build).
+// Build the engine first: Windows engine\build.cmd dml, Linux cmake --preset linux, macOS cmake --preset mac.
 import { execFileSync } from 'node:child_process';
 import { chmodSync, cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -15,7 +15,8 @@ const arg = (name, fallback) => {
   return i > 0 ? process.argv[i + 1] : fallback;
 };
 
-const windows = process.platform === 'win32';
+const os = process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'mac' : 'linux';
+const windows = os === 'windows';
 const net = arg('net');
 const version = arg('version', '1.0.0');
 if (!net || !existsSync(net)) throw new Error('pass --net path/to/gen-NNNN/net.onnx');
@@ -23,12 +24,57 @@ const generation = /gen-(\d{4})/.exec(path.resolve(net))?.[1];
 if (!generation) throw new Error('the network path must contain its generation folder, e.g. gen-0455');
 
 const thirdParty = path.join(root, 'engine/third_party');
-const ortLinux = path.join(thirdParty, 'onnxruntime-linux-x64-gpu-1.24.4');
 const webGpu = path.join(thirdParty, 'ep-webgpu-0.4.0');
-const engineDir = path.join(root, windows ? 'engine/build/dml' : 'engine/build/linux');
-const engineFiles = windows
-  ? ['sixengine.exe', 'onnxruntime.dll', 'onnxruntime_providers_shared.dll', 'DirectML.dll']
-  : ['sixengine', ...readdirSync(engineDir).filter((f) => /^libonnxruntime.*\.so/.test(f))];
+const platform = {
+  windows: {
+    engineDir: 'engine/build/dml',
+    libraries: /^(onnxruntime(_providers_shared)?|DirectML)\.dll$/,
+    engine: 'sixengine.exe',
+    node: 'node/node.exe',
+    licenses: [
+      ['ort-dml-1.24.4/LICENSE', 'onnxruntime-LICENSE.txt'],
+      ['ort-dml-1.24.4/ThirdPartyNotices.txt', 'onnxruntime-ThirdPartyNotices.txt'],
+      ['directml-1.15.4/LICENSE.txt', 'DirectML-LICENSE.txt'],
+      ['directml-1.15.4/ThirdPartyNotices.txt', 'DirectML-ThirdPartyNotices.txt'],
+    ],
+    archive: `Six-${version}-windows-x64.zip`,
+    gpu: 'The bot runs on your graphics card (any DirectX 12 GPU: NVIDIA, AMD or Intel)',
+    start: 'extract the zip first (right-click it, Extract All), then double-click "Start Six.cmd"\nin the extracted folder. Your browser opens at http://localhost:6600.\nKeep the black window open while you play; close it to stop Six.',
+  },
+  linux: {
+    engineDir: 'engine/build/linux',
+    libraries: /^libonnxruntime.*\.so/,
+    engine: 'sixengine',
+    node: 'node/node',
+    licenses: [
+      ['onnxruntime-linux-x64-gpu-1.24.4/LICENSE', 'onnxruntime-LICENSE.txt'],
+      ['onnxruntime-linux-x64-gpu-1.24.4/ThirdPartyNotices.txt', 'onnxruntime-ThirdPartyNotices.txt'],
+      [path.join(webGpu, 'LICENSE'), 'onnxruntime-webgpu-LICENSE.txt'],
+      [path.join(webGpu, 'ThirdPartyNotices.txt'), 'onnxruntime-webgpu-ThirdPartyNotices.txt'],
+    ],
+    archive: `Six-${version}-linux-x64.tar.gz`,
+    gpu: 'The bot runs on your graphics card: NVIDIA through CUDA when CUDA 12 and cuDNN 9 are installed, otherwise any\nAMD, Intel or NVIDIA card through WebGPU (needs the Vulkan driver, libvulkan1), and on the CPU if neither works (slower)',
+    start: 'run ./start-six.sh. Your browser opens at http://localhost:6600.\nKeep the terminal open while you play; Ctrl+C stops Six.',
+  },
+  mac: {
+    engineDir: 'engine/build/mac',
+    libraries: /^libonnxruntime.*\.dylib$/,
+    engine: 'sixengine',
+    node: 'node/node',
+    licenses: [
+      ['onnxruntime-osx-arm64-1.24.4/LICENSE', 'onnxruntime-LICENSE.txt'],
+      ['onnxruntime-osx-arm64-1.24.4/ThirdPartyNotices.txt', 'onnxruntime-ThirdPartyNotices.txt'],
+      [path.join(webGpu, 'LICENSE'), 'onnxruntime-webgpu-LICENSE.txt'],
+      [path.join(webGpu, 'ThirdPartyNotices.txt'), 'onnxruntime-webgpu-ThirdPartyNotices.txt'],
+    ],
+    archive: `Six-${version}-macos-arm64.zip`,
+    gpu: 'The bot runs on the Mac\'s GPU through WebGPU (Metal), and on the CPU if that fails. Apple Silicon (M1 or newer) only',
+    start: 'double-click the zip to unpack it, then right-click "Start Six.command" and choose Open (the first time\nmacOS asks because the app isn\'t from the App Store). Your browser opens at http://localhost:6600.\nKeep the Terminal window open while you play; close it to stop Six.',
+  },
+}[os];
+
+const engineDir = path.join(root, platform.engineDir);
+const engineFiles = [platform.engine, ...readdirSync(engineDir).filter((f) => platform.libraries.test(f))];
 for (const f of engineFiles) {
   if (!existsSync(path.join(engineDir, f))) throw new Error(`missing ${f}: build the engine first`);
 }
@@ -64,25 +110,12 @@ mkdirSync(path.join(out, `runs/rl/gen-${generation}`), { recursive: true });
 cpSync(net, path.join(out, `runs/rl/gen-${generation}/net.onnx`));
 
 mkdirSync(path.join(out, 'node'), { recursive: true });
-cpSync(process.execPath, path.join(out, windows ? 'node/node.exe' : 'node/node'));
+cpSync(process.execPath, path.join(out, platform.node));
 
 const licenses = path.join(out, 'licenses');
 mkdirSync(licenses, { recursive: true });
 cpSync(path.join(root, 'LICENSE'), path.join(out, 'LICENSE.txt'));
-const thirdPartyLicenses = windows
-  ? [
-      ['ort-dml-1.24.4/LICENSE', 'onnxruntime-LICENSE.txt'],
-      ['ort-dml-1.24.4/ThirdPartyNotices.txt', 'onnxruntime-ThirdPartyNotices.txt'],
-      ['directml-1.15.4/LICENSE.txt', 'DirectML-LICENSE.txt'],
-      ['directml-1.15.4/ThirdPartyNotices.txt', 'DirectML-ThirdPartyNotices.txt'],
-    ]
-  : [
-      [path.join(ortLinux, 'LICENSE'), 'onnxruntime-LICENSE.txt'],
-      [path.join(ortLinux, 'ThirdPartyNotices.txt'), 'onnxruntime-ThirdPartyNotices.txt'],
-      [path.join(webGpu, 'LICENSE'), 'onnxruntime-webgpu-LICENSE.txt'],
-      [path.join(webGpu, 'ThirdPartyNotices.txt'), 'onnxruntime-webgpu-ThirdPartyNotices.txt'],
-    ];
-for (const [from, to] of thirdPartyLicenses) cpSync(path.resolve(thirdParty, from), path.join(licenses, to));
+for (const [from, to] of platform.licenses) cpSync(path.resolve(thirdParty, from), path.join(licenses, to));
 const nodeLicense = await fetch(`https://raw.githubusercontent.com/nodejs/node/${process.version}/LICENSE`);
 if (!nodeLicense.ok) throw new Error(`could not fetch the Node.js license (${nodeLicense.status})`);
 writeFileSync(path.join(licenses, 'node-LICENSE.txt'), await nodeLicense.text());
@@ -113,17 +146,19 @@ echo Keep this window open while you play. Close it to stop Six.\r
 if errorlevel 1 pause\r
 `);
 } else {
-  const start = path.join(out, 'start-six.sh');
+  const mac = os === 'mac';
+  const open = mac ? 'open' : 'xdg-open';
+  const start = path.join(out, mac ? 'Start Six.command' : 'start-six.sh');
   writeFileSync(start, `#!/bin/sh
-# Starts Six at http://localhost:6600 and opens it in the browser. Ctrl+C stops it.
+# Starts Six at http://localhost:6600 and opens it in the browser. ${mac ? 'Closing the window' : 'Ctrl+C'} stops it.
 cd "$(dirname "$0")"
-export SIX_ENGINE="$PWD/engine/sixengine"
+${mac ? '# Downloaded files are quarantined; once this script is allowed to run, clear the flag on the rest.\nxattr -dr com.apple.quarantine . 2>/dev/null\n' : ''}export SIX_ENGINE="$PWD/engine/sixengine"
 if curl -s -o /dev/null -m 2 http://localhost:6600/api/info; then
-  xdg-open http://localhost:6600 >/dev/null 2>&1 &
+  ${open} http://localhost:6600 >/dev/null 2>&1 &
   exit 0
 fi
-(sleep 3 && xdg-open http://localhost:6600 >/dev/null 2>&1) &
-echo "Six is running at http://localhost:6600 (Ctrl+C to stop)"
+(sleep 3 && ${open} http://localhost:6600 >/dev/null 2>&1) &
+echo "Six is running at http://localhost:6600"
 exec ./node/node web/src/server/main.mjs --prod
 `);
   chmodSync(start, 0o755);
@@ -131,33 +166,31 @@ exec ./node/node web/src/server/main.mjs --prod
   chmodSync(path.join(out, 'engine/sixengine'), 0o755);
 }
 
-const gpu = windows
-  ? 'The bot runs on your graphics card (any DirectX 12 GPU: NVIDIA, AMD or Intel)'
-  : 'The bot runs on your graphics card: NVIDIA through CUDA when CUDA 12 and cuDNN 9 are installed, otherwise any\nAMD, Intel or NVIDIA card through WebGPU (needs the Vulkan driver, libvulkan1), and on the CPU if neither works (slower)';
 writeFileSync(path.join(out, 'README.txt'), `Six ${version}: hex tic-tac-toe with a self-trained bot
 https://github.com/CixMango/Six
 
-Start: ${windows
-  ? 'extract the zip first (right-click it, Extract All), then double-click "Start Six.cmd"\nin the extracted folder. Your browser opens at http://localhost:6600.\nKeep the black window open while you play; close it to stop Six.'
-  : 'run ./start-six.sh. Your browser opens at http://localhost:6600.\nKeep the terminal open while you play; Ctrl+C stops Six.'}
+Start: ${platform.start}
 
-${gpu}, with network generation ${Number(generation)}.
+${platform.gpu}, with network generation ${Number(generation)}.
 Give it more thinking time on the home screen for stronger play; 10 s or more is well beyond the website.
 
 Friends on your LAN or Hamachi can join by the link Six shows, if your firewall lets port 6600 through.
 
 Saved games go in the "data" folder next to this file.
 
-License: MIT (LICENSE.txt), including the network. Bundled Node.js${windows ? ', ONNX Runtime and DirectML keep their own' : ' and ONNX Runtime keep their own'}
+License: MIT (LICENSE.txt), including the network. The bundled Node.js, ONNX Runtime${windows ? ' and DirectML' : ''} keep their own
 licenses (licenses folder).
 `);
 
-const archive = path.join(web, 'release', windows ? `Six-${version}-windows-x64.zip` : `Six-${version}-linux-x64.tar.gz`);
+const archive = path.join(web, 'release', platform.archive);
 rmSync(archive, { force: true });
 if (windows) {
   // Windows' own tar writes zip files (Git's GNU tar doesn't).
   const tar = path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe');
   execFileSync(tar, ['-a', '-c', '-f', archive, 'Six'], { cwd: path.dirname(out), stdio: 'inherit' });
+} else if (os === 'mac') {
+  // ditto keeps the executable bits that Finder's unzip needs.
+  execFileSync('ditto', ['-c', '-k', '--keepParent', 'Six', archive], { cwd: path.dirname(out), stdio: 'inherit' });
 } else {
   execFileSync('tar', ['-czf', archive, 'Six'], { cwd: path.dirname(out), stdio: 'inherit' });
 }
