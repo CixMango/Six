@@ -1263,7 +1263,7 @@
 .coach-summary {
   flex: none;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   border-bottom: 1px solid var(--hairline-soft);
 }
 
@@ -1271,7 +1271,8 @@
   display: grid;
   align-content: start;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-5);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
 }
 
 .coach-player + .coach-player {
@@ -1582,6 +1583,22 @@
 .coach-practise {
   align-self: end;
   width: 100%;
+  white-space: normal;
+}
+
+/* Long label names shorten instead of pushing the count out of the column. */
+.coach-counts dt {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.coach-counts .label-chip {
+  max-width: 100%;
+}
+
+.coach-counts .label-chip > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .review-key-hex[data-kind='played'] polygon {

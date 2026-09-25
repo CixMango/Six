@@ -11,7 +11,7 @@
 //   quit
 //
 // With `--net model.onnx` (plus optional `--cpu` or `--trt`) it plays with MCTS instead of alpha-beta.
-// GPU runs need the CUDA (and for --trt, TensorRT) DLLs on PATH.
+// GPU runs need the CUDA (and for --trt, TensorRT) DLLs on PATH; a SIX_DML build uses DirectML instead.
 #include <algorithm>
 #include <atomic>
 #include <memory>
@@ -83,7 +83,11 @@ int main(int argc, char** argv) {
   std::unique_ptr<six::Mcts> mcts;
   for (int i = 1; i < argc; ++i) {
     if (std::string(argv[i]) == "--net" && i + 1 < argc) {
+#ifdef SIX_DML
+      six::Device device = six::Device::DirectMl;
+#else
       six::Device device = six::Device::Cuda;
+#endif
       for (int j = 1; j < argc; ++j) {
         if (std::string(argv[j]) == "--cpu") device = six::Device::Cpu;
         if (std::string(argv[j]) == "--trt") device = six::Device::TensorRt;

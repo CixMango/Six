@@ -23,7 +23,8 @@ class NetworkEvaluator {
 };
 
 // TensorRt builds fp16 engines, cached beside the model on first use, and falls back to CUDA per node.
-enum class Device { Cpu, Cuda, TensorRt };
+// DirectMl needs a SIX_DML build.
+enum class Device { Cpu, Cuda, TensorRt, DirectMl };
 
 class Evaluator : public NetworkEvaluator {
  public:

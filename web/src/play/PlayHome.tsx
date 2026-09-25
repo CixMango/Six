@@ -200,9 +200,8 @@ export function PlayHome() {
           navigate('/review');
         }} />
         <p className="legal-note">
-          &copy; 2026 CixMango. Six is open source under the MIT license:{' '}
-          <a href="https://github.com/CixMango/Six" target="_blank" rel="noopener">source code</a>. The trained network
-          is not included and may be played here only.{' '}
+          &copy; 2026 CixMango. Six and its trained network are open source under the MIT license:{' '}
+          <a href="https://github.com/CixMango/Six" target="_blank" rel="noopener">source and download</a>.{' '}
           <a href="/notice.txt" target="_blank" rel="noopener">Full notice</a>
         </p>
         </div>

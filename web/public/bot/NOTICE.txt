@@ -1,10 +1,5 @@
 Six - hex tic-tac-toe bot
 Copyright (c) 2026 CixMango
 
-The Six source code, including the engine in sixbot.mjs and sixbot.wasm, is open source under the MIT license:
-https://github.com/CixMango/Six
-
-The trained networks (hexnet.onnx and hexnet-fp16.onnx) are not covered by that license. All rights reserved:
-they are provided only so that Six can be played on https://playsix.cixmango.workers.dev, and may not be copied,
-redistributed or reused elsewhere (including fine-tuning or training on their weights) without the written
-permission of CixMango. Contact: cix on Discord.
+Six, including its engine (sixbot.mjs, sixbot.wasm) and its trained networks (hexnet.onnx, hexnet-fp16.onnx), is
+open source under the MIT license: https://github.com/CixMango/Six

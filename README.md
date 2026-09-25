@@ -4,7 +4,15 @@ Hex tic-tac-toe (Connect6 on an endless hex grid) with a bot that learned the ga
 
 X opens with one stone, then each player places two stones per turn. First to six in a row wins. Stones can go anywhere within 9 steps of a stone already on the board (8 on [HeXO](https://hexo.did.science)).
 
-Play it in the browser at **https://playsix.cixmango.workers.dev**, or run the full app locally.
+Play it in the browser at **https://playsix.cixmango.workers.dev**, or download it and let the bot think harder on your own GPU.
+
+![Game review](.github/screenshot.png)
+
+## Download (Windows)
+
+Grab `Six-<version>-windows-x64.zip` from [Releases](https://github.com/CixMango/Six/releases), unzip it anywhere and double-click `Start Six.cmd`. Nothing else to install.
+
+It runs the native engine with the newest network on any DirectX 12 GPU (NVIDIA, AMD or Intel), so at the same thinking time it searches far more than the browser version, and you can give it up to 45 s a turn.
 
 ## Features
 
@@ -16,7 +24,7 @@ Play it in the browser at **https://playsix.cixmango.workers.dev**, or run the f
 - Analysis board and saved replays
 - Training dashboard for the self-play loop
 
-## Running it (Windows)
+## Running from source (Windows)
 
 Needs Node 24. Double-click `Start Six.cmd`, or:
 
@@ -55,8 +63,11 @@ python -m venv .venv
 .venv\Scripts\python trainer\loop.py --help
 ```
 
-A CUDA GPU is strongly recommended. Trained networks are not included in this repo.
+A CUDA GPU is strongly recommended. The trained network is in the release download, not in this repo.
+
+To build the download yourself: `engine\build.cmd dml` (the DirectML engine), then
+`node web/scripts/package-release.mjs --net path/to/gen-NNNN/net.onnx`.
 
 ## License
 
-MIT, see [LICENSE](LICENSE). The trained networks used on the website are not covered by the license.
+MIT, see [LICENSE](LICENSE). That includes the trained network in the release.

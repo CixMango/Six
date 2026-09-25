@@ -57,3 +57,6 @@ web/public/sounds/blunder.mp3
 
 # Screenshots from web/scripts/capture.mjs
 captures/
+
+# Windows download built by web/scripts/package-release.mjs
+web/release/

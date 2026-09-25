@@ -10,6 +10,9 @@
 #include <windows.h>
 
 #include <onnxruntime_cxx_api.h>
+#ifdef SIX_DML
+#include <dml_provider_factory.h>
+#endif
 
 namespace six {
 namespace {
@@ -54,6 +57,15 @@ Evaluator::Evaluator(const std::string& onnxPath, Device device) : impl_(std::ma
     Ort::ThrowOnError(Ort::GetApi().CreateCUDAProviderOptions(&cuda));
     options.AppendExecutionProvider_CUDA_V2(*cuda);
     Ort::GetApi().ReleaseCUDAProviderOptions(cuda);
+  } else if (device == Device::DirectMl) {
+#ifdef SIX_DML
+    // DirectML can't use memory patterns or parallel execution; batches all come from one thread anyway.
+    options.DisableMemPattern();
+    options.SetExecutionMode(ExecutionMode::ORT_SEQUENTIAL);
+    Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_DML(options, 0));
+#else
+    throw std::runtime_error("this engine was built without DirectML");
+#endif
   } else {
     options.SetIntraOpNumThreads(1);
   }
