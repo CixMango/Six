@@ -1,9 +1,11 @@
 #include "evaluator.hpp"
 
 #include <cmath>
+#include <filesystem>
 #include <iostream>
 #include <iterator>
 #include <stdexcept>
+#include <unordered_map>
 #include <vector>
 
 #ifdef _WIN32
@@ -32,6 +34,44 @@ std::basic_string<ORTCHAR_T> modelPath(const std::string& utf8) {
 #else
 std::string modelPath(const std::string& utf8) { return utf8; }
 #endif
+
+std::filesystem::path executableDir() {
+#ifdef _WIN32
+  wchar_t buffer[MAX_PATH];
+  const DWORD size = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+  return std::filesystem::path(std::wstring(buffer, size)).parent_path();
+#else
+  std::error_code error;
+  return std::filesystem::read_symlink("/proc/self/exe", error).parent_path();
+#endif
+}
+
+// Registers the WebGPU plugin shipped next to the executable and adds its device to `options`.
+bool appendWebGpu(Ort::Env& env, Ort::SessionOptions& options) {
+#ifdef _WIN32
+  const auto library = executableDir() / "onnxruntime_providers_webgpu.dll";
+#else
+  const auto library = executableDir() / "libonnxruntime_providers_webgpu.so";
+#endif
+  if (!std::filesystem::exists(library)) return false;
+  try {
+    env.RegisterExecutionProviderLibrary("webgpu_ep", library.native());
+    std::vector<Ort::ConstEpDevice> devices;
+    for (const Ort::ConstEpDevice& device : env.GetEpDevices()) {
+      if (std::string(device.EpName()).find("WebGpu") != std::string::npos) devices.push_back(device);
+    }
+    if (devices.empty()) {
+      std::cerr << "WebGPU found no graphics card (on Linux it needs the Vulkan loader, libvulkan.so.1)\n";
+      return false;
+    }
+    options.AppendExecutionProvider_V2(env, devices, std::unordered_map<std::string, std::string>{});
+    std::cerr << "using WebGPU\n";
+    return true;
+  } catch (const Ort::Exception& e) {
+    std::cerr << "WebGPU is not available: " << e.what() << '\n';
+    return false;
+  }
+}
 
 }  // namespace
 
@@ -66,10 +106,13 @@ Evaluator::Evaluator(const std::string& onnxPath, Device device) : impl_(std::ma
       Ort::ThrowOnError(Ort::GetApi().CreateCUDAProviderOptions(&cuda));
       options.AppendExecutionProvider_CUDA_V2(*cuda);
     } catch (const Ort::Exception& e) {
-      // No usable CUDA (say, a Linux PC without the CUDA libraries): run on every CPU core instead of failing.
-      std::cerr << "CUDA is not available, using the CPU: " << e.what() << '\n';
+      // No usable CUDA (an AMD or Intel card, or no CUDA libraries): try WebGPU, then every CPU core.
+      std::cerr << "CUDA is not available: " << e.what() << '\n';
+      if (!appendWebGpu(impl_->env, options)) std::cerr << "using the CPU\n";
     }
     if (cuda) Ort::GetApi().ReleaseCUDAProviderOptions(cuda);
+  } else if (device == Device::WebGpu) {
+    if (!appendWebGpu(impl_->env, options)) std::cerr << "using the CPU\n";
   } else if (device == Device::DirectMl) {
 #ifdef SIX_DML
     // DirectML can't use memory patterns or parallel execution; batches all come from one thread anyway.

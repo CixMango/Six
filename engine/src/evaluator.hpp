@@ -23,8 +23,9 @@ class NetworkEvaluator {
 };
 
 // TensorRt builds fp16 engines, cached beside the model on first use, and falls back to CUDA per node.
-// DirectMl needs a SIX_DML build.
-enum class Device { Cpu, Cuda, TensorRt, DirectMl };
+// DirectMl needs a SIX_DML build. WebGpu needs the ONNX Runtime WebGPU plugin next to the executable (Vulkan on
+// Linux, so AMD, Intel and NVIDIA cards all work); Cuda falls back to it, then to the CPU.
+enum class Device { Cpu, Cuda, TensorRt, DirectMl, WebGpu };
 
 class Evaluator : public NetworkEvaluator {
  public:

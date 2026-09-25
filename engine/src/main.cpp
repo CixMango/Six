@@ -91,6 +91,7 @@ int main(int argc, char** argv) {
       for (int j = 1; j < argc; ++j) {
         if (std::string(argv[j]) == "--cpu") device = six::Device::Cpu;
         if (std::string(argv[j]) == "--trt") device = six::Device::TensorRt;
+        if (std::string(argv[j]) == "--webgpu") device = six::Device::WebGpu;
       }
       try {
         evaluator = std::make_unique<six::Evaluator>(argv[i + 1], device);

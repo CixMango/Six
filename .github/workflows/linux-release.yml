@@ -22,14 +22,17 @@ jobs:
         with:
           node-version: 24
 
-      - name: Build tools
-        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Build tools (and a software Vulkan driver to test WebGPU on)
+        run: sudo apt-get update && sudo apt-get install -y ninja-build libvulkan1 mesa-vulkan-drivers
 
       - name: ONNX Runtime (CUDA 12 build)
         run: |
           curl -sSL -o ort.tgz https://github.com/microsoft/onnxruntime/releases/download/v1.24.4/onnxruntime-linux-x64-gpu-1.24.4.tgz
           mkdir -p engine/third_party
           tar -xzf ort.tgz -C engine/third_party
+          curl -sSL -o ep.nupkg https://www.nuget.org/api/v2/package/Microsoft.ML.OnnxRuntime.EP.WebGpu/0.4.0
+          mkdir -p engine/third_party/ep-webgpu-0.4.0
+          unzip -q ep.nupkg -d engine/third_party/ep-webgpu-0.4.0
 
       - name: Engine
         working-directory: engine
@@ -37,6 +40,11 @@ jobs:
           cmake --preset linux
           cmake --build --preset linux
           ./build/linux/sixtests
+          # WebGPU on the software Vulkan driver: the network must load on it and play a move.
+          printf 'six\nisready\nposition radius 8 moves 0 0 1 0 2 -1\ngo movetime 3000\n' > /tmp/in.txt
+          (cat /tmp/in.txt; sleep 30; echo quit) | ./build/linux/sixengine --net tests/fixtures/tiny.onnx --webgpu 2>&1 | tee /tmp/webgpu.txt
+          grep -q "using WebGPU" /tmp/webgpu.txt
+          grep -q "^bestmove" /tmp/webgpu.txt
 
       - name: Network from the Windows download
         env:

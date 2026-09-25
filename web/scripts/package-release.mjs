@@ -24,6 +24,7 @@ if (!generation) throw new Error('the network path must contain its generation f
 
 const thirdParty = path.join(root, 'engine/third_party');
 const ortLinux = path.join(thirdParty, 'onnxruntime-linux-x64-gpu-1.24.4');
+const webGpu = path.join(thirdParty, 'ep-webgpu-0.4.0');
 const engineDir = path.join(root, windows ? 'engine/build/dml' : 'engine/build/linux');
 const engineFiles = windows
   ? ['sixengine.exe', 'onnxruntime.dll', 'onnxruntime_providers_shared.dll', 'DirectML.dll']
@@ -78,6 +79,8 @@ const thirdPartyLicenses = windows
   : [
       [path.join(ortLinux, 'LICENSE'), 'onnxruntime-LICENSE.txt'],
       [path.join(ortLinux, 'ThirdPartyNotices.txt'), 'onnxruntime-ThirdPartyNotices.txt'],
+      [path.join(webGpu, 'LICENSE'), 'onnxruntime-webgpu-LICENSE.txt'],
+      [path.join(webGpu, 'ThirdPartyNotices.txt'), 'onnxruntime-webgpu-ThirdPartyNotices.txt'],
     ];
 for (const [from, to] of thirdPartyLicenses) cpSync(path.resolve(thirdParty, from), path.join(licenses, to));
 const nodeLicense = await fetch(`https://raw.githubusercontent.com/nodejs/node/${process.version}/LICENSE`);
@@ -130,7 +133,7 @@ exec ./node/node web/src/server/main.mjs --prod
 
 const gpu = windows
   ? 'The bot runs on your graphics card (any DirectX 12 GPU: NVIDIA, AMD or Intel)'
-  : 'The bot runs on an NVIDIA graphics card when CUDA 12 and cuDNN 9 are installed, and on the CPU otherwise (slower)';
+  : 'The bot runs on your graphics card: NVIDIA through CUDA when CUDA 12 and cuDNN 9 are installed, otherwise any\nAMD, Intel or NVIDIA card through WebGPU (needs the Vulkan driver, libvulkan1), and on the CPU if neither works (slower)';
 writeFileSync(path.join(out, 'README.txt'), `Six ${version}: hex tic-tac-toe with a self-trained bot
 https://github.com/CixMango/Six
 
