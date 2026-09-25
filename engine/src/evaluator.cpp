@@ -67,14 +67,16 @@ bool appendWebGpu(Ort::Env& env, Ort::SessionOptions& options) {
   if (!std::filesystem::exists(library)) return false;
   try {
     env.RegisterExecutionProviderLibrary("webgpu_ep", library.native());
-    // Some builds also have WebGPU built in, and devices from two providers can't be mixed: keep the first one's.
+    // The macOS build also has WebGPU built in under the same name, and two providers' devices can't be mixed:
+    // take just the first WebGPU device.
     std::vector<Ort::ConstEpDevice> devices;
     std::string provider;
     for (const Ort::ConstEpDevice& device : env.GetEpDevices()) {
       const std::string name = device.EpName();
       if (name.find("WebGpu") == std::string::npos) continue;
-      if (provider.empty()) provider = name;
-      if (name == provider) devices.push_back(device);
+      provider = name;
+      devices.push_back(device);
+      break;
     }
     if (devices.empty()) {
       std::cerr << "WebGPU found no graphics card (on Linux it needs the Vulkan loader, libvulkan.so.1)\n";
