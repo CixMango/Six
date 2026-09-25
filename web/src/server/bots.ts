@@ -134,7 +134,8 @@ export function parseBotTurnRequest(body: unknown): BotTurnRequest {
   if (!Number.isInteger(level) || level < 1 || level > bot.levels) throw new Error('bad level');
   if (v.generation === undefined || v.generation === null) return { moves, radius: v.radius as number, bot: bot.id, level };
   const generation = Number(v.generation);
-  if (bot.id !== 'hexnet' || !Number.isInteger(generation) || !listGenerations().includes(generation)) {
+  // Published generations that aren't on this PC yet are fetched by generationNetwork, which also rejects unknown ones.
+  if (bot.id !== 'hexnet' || !Number.isInteger(generation) || generation < 0 || generation > 9999) {
     throw new Error('bad generation');
   }
   return { moves, radius: v.radius as number, bot: bot.id, level, generation };
