@@ -67,16 +67,21 @@ bool appendWebGpu(Ort::Env& env, Ort::SessionOptions& options) {
   if (!std::filesystem::exists(library)) return false;
   try {
     env.RegisterExecutionProviderLibrary("webgpu_ep", library.native());
+    // Some builds also have WebGPU built in, and devices from two providers can't be mixed: keep the first one's.
     std::vector<Ort::ConstEpDevice> devices;
+    std::string provider;
     for (const Ort::ConstEpDevice& device : env.GetEpDevices()) {
-      if (std::string(device.EpName()).find("WebGpu") != std::string::npos) devices.push_back(device);
+      const std::string name = device.EpName();
+      if (name.find("WebGpu") == std::string::npos) continue;
+      if (provider.empty()) provider = name;
+      if (name == provider) devices.push_back(device);
     }
     if (devices.empty()) {
       std::cerr << "WebGPU found no graphics card (on Linux it needs the Vulkan loader, libvulkan.so.1)\n";
       return false;
     }
     options.AppendExecutionProvider_V2(env, devices, std::unordered_map<std::string, std::string>{});
-    std::cerr << "using WebGPU\n";
+    std::cerr << "using WebGPU (" << provider << ")\n";
     return true;
   } catch (const Ort::Exception& e) {
     std::cerr << "WebGPU is not available: " << e.what() << '\n';
