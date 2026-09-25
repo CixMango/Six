@@ -45,7 +45,7 @@ class Board {
   static constexpr int kSize = 256;
   static constexpr int kCells = kSize * kSize;
 
-  explicit Board(int radius = 9);
+  explicit Board(int radius = 8);
 
   // Skips playable-area upkeep: placement only checks the cell is empty, so callers must stay
   // within radius of a stone. Playable-area queries are meaningless in this mode.

@@ -9,7 +9,7 @@ import { BoardCanvas, type BoardHandle } from '../board/BoardCanvas.tsx';
 import type { BoardMark } from '../board/renderer.ts';
 import { BlunderCall, ChannelBug, Dock, LowerThird, Scorebug, Segmented } from '../components/Broadcast.tsx';
 import { api } from '../lib/api.ts';
-import { lastMoveInfo, RADIUS_OPTIONS } from '../lib/gameView.ts';
+import { lastMoveInfo } from '../lib/gameView.ts';
 import { useNarrow } from '../lib/useNarrow.ts';
 import { useWinChance } from '../lib/useWinChance.ts';
 import { swappedTeamColors } from '../lib/teamColors.ts';
@@ -24,7 +24,7 @@ export function AnalysisScreen() {
 
   const [record, setRecord] = useState<ReplayRecord | null>(null);
   const [loadError, setLoadError] = useState('');
-  const [radius, setRadius] = useState<8 | 9>(9);
+  const [radius, setRadius] = useState<8 | 9>(8);
   const [line, setLine] = useState<Hex[]>([]);
   const [cursor, setCursor] = useState(0);
   const [showThreats, setShowThreats] = useState(true);
@@ -196,11 +196,6 @@ export function AnalysisScreen() {
           <div className="lt-actions">
             <button type="button" className="button" onClick={playSuggestion}>Play it</button>
             <button type="button" className="button is-quiet" onClick={() => setSuggestion(null)}>Dismiss</button>
-          </div>
-        )}
-        {!record && line.length === 0 && (
-          <div className="lt-controls">
-            <Segmented label="Rules" value={radius} options={[...RADIUS_OPTIONS]} onChange={(v) => { setRadius(v as 8 | 9); setVersion((n) => n + 1); }} />
           </div>
         )}
       </LowerThird>

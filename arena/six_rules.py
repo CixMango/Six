@@ -38,7 +38,7 @@ def cells_within(center: Cell, radius: int):
 
 
 class Game:
-    def __init__(self, radius: int = 9):
+    def __init__(self, radius: int = 8):
         self.radius = radius
         self.cells: dict[Cell, str] = {}
         self.moves: list[Cell] = []

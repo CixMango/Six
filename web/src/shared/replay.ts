@@ -1,4 +1,4 @@
-import { Game, otherPlayer, RADII, turnForStone, type Player } from './rules.ts';
+import { Game, otherPlayer, SAVED_RADII, turnForStone, type Player } from './rules.ts';
 
 export type MatchMode = 'online' | 'bot' | 'botmatch' | 'analysis' | 'hexo';
 export type ResultReason = 'six' | 'resign' | 'abandoned' | 'unfinished';
@@ -103,7 +103,7 @@ export function validateReplay(value: unknown): ReplayRecord {
   if (typeof v.id !== 'string' || !ID_PATTERN.test(v.id)) fail('bad id');
   if (typeof v.createdAt !== 'string' || Number.isNaN(Date.parse(v.createdAt))) fail('bad createdAt');
   if (!MODES.includes(v.mode as MatchMode)) fail('bad mode');
-  if (!RADII.includes(v.radius as 8 | 9)) fail('bad radius');
+  if (!SAVED_RADII.includes(v.radius as 8 | 9)) fail('bad radius');
   const players = v.players as Record<string, unknown> | undefined;
   const seats = { X: checkSeat(players?.X, 'X'), O: checkSeat(players?.O, 'O') };
   if (!Array.isArray(v.moves) || v.moves.length > 5000) fail('bad moves');

@@ -84,10 +84,10 @@ const trainingShots = [
 const shots = TRAINING ? trainingShots : EMPTY ? emptyShots : [
   { name: 'desktop', url: '/', view: desktop, settle: 12000 },
   { name: 'mobile', url: '/', view: phone, settle: 12000 },
-  { name: 'bot-desktop', url: '/bot?side=O&level=3&radius=9', view: desktop, settle: 3000 },
-  { name: 'bot-mobile', url: '/bot?side=O&level=3&radius=9', view: phone, settle: 3000 },
-  { name: 'watch-desktop', url: '/watch?x=5&o=3&radius=9', view: desktop, settle: 16000 },
-  { name: 'watch-mobile', url: '/watch?x=5&o=3&radius=9', view: phone, settle: 16000 },
+  { name: 'bot-desktop', url: '/bot?side=O&level=3', view: desktop, settle: 3000 },
+  { name: 'bot-mobile', url: '/bot?side=O&level=3', view: phone, settle: 3000 },
+  { name: 'watch-desktop', url: '/watch?x=5&o=3', view: desktop, settle: 16000 },
+  { name: 'watch-mobile', url: '/watch?x=5&o=3', view: phone, settle: 16000 },
   ...(won
     ? [
         { name: 'analysis-desktop', url: `/analysis/${won.id}`, view: desktop, settle: 2500 },
@@ -96,10 +96,10 @@ const shots = TRAINING ? trainingShots : EMPTY ? emptyShots : [
     : []),
   { name: 'replays-desktop', url: '/replays', view: desktop, settle: 1500 },
   { name: 'replays-mobile', url: '/replays', view: phone, settle: 1500 },
-  { name: 'room-waiting-desktop', url: '/room/new?side=X&radius=9', view: desktop, settle: 2500, name_: 'Levi' },
-  { name: 'room-waiting-mobile', url: '/room/new?side=X&radius=9', view: phone, settle: 2500, name_: 'Levi' },
-  { name: 'result-desktop', url: '/bot?side=X&level=3&radius=9', view: desktop, settle: 1500, resign: true },
-  { name: 'result-mobile', url: '/bot?side=X&level=3&radius=9', view: phone, settle: 1500, resign: true },
+  { name: 'room-waiting-desktop', url: '/room/new?side=X', view: desktop, settle: 2500, name_: 'Levi' },
+  { name: 'room-waiting-mobile', url: '/room/new?side=X', view: phone, settle: 2500, name_: 'Levi' },
+  { name: 'result-desktop', url: '/bot?side=X&level=3', view: desktop, settle: 1500, resign: true },
+  { name: 'result-mobile', url: '/bot?side=X&level=3', view: phone, settle: 1500, resign: true },
 ];
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -5,9 +5,9 @@
 //
 // Every stone gets a Gumbel search; a random `full-share` percent of them get the full budget and become
 // training rows (playout cap randomization). Openings are random clustered positions of 1-11 stones with
-// no side holding four, at radius 8 or 9. Each thread appends games to <dir>/games-<thread>.jsonl:
+// no side holding four. Each thread appends games to <dir>/games-<thread>.jsonl:
 //
-//   {"radius":9,"opening":5,"moves":[[q,r],...],"winner":"X"|"O"|null,
+//   {"radius":8,"opening":5,"moves":[[q,r],...],"winner":"X"|"O"|null,
 //    "rows":[{"at":12,"value":0.31,"policy":[[q,r,p],...]},...]}
 //
 // `at` is the number of stones before the searched stone; `value` is the search value for its mover.
@@ -77,7 +77,7 @@ Options parse(int argc, char** argv) {
 
 /** A random opening: stones placed within two steps of earlier ones, redrawn whenever a side would hold four. */
 six::Board randomOpening(std::mt19937_64& rng) {
-  const int radius = rng() % 2 == 0 ? 8 : 9;
+  const int radius = 8;
   const int stones = 1 + 2 * static_cast<int>(rng() % 6);
   while (true) {
     six::Board board(radius);

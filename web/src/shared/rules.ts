@@ -5,9 +5,10 @@ export type PlaceError = 'game-over' | 'occupied' | 'out-of-range';
 export type PlaceResult = { ok: true; won: boolean } | { ok: false; error: PlaceError };
 
 export const WIN_LENGTH = 6;
-export const DEFAULT_RADIUS = 9;
-export const RADII = [9, 8] as const;
-export type Radius = (typeof RADII)[number];
+export const DEFAULT_RADIUS = 8;
+export const RADII = [8] as const;
+// Older saved games were played at radius 9; they can still be opened and reviewed.
+export const SAVED_RADII = [8, 9] as const;
 
 export function otherPlayer(p: Player): Player {
   return p === 'X' ? 'O' : 'X';

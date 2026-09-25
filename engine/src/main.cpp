@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
     } else if (command == "position") {
       finishSearch();
       std::string word;
-      int radius = 9;
+      int radius = 8;
       std::vector<six::Hex> moves;
       while (in >> word) {
         if (word == "radius") {

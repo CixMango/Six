@@ -10,7 +10,7 @@ import { SettingsButton } from '../components/Settings.tsx';
 import { GenerationSlider } from '../components/GenerationSlider.tsx';
 import { api, type ServerInfo, type TrainingView } from '../lib/api.ts';
 import { BOT_META, isBotId, isTimedBot, type BotId } from '../../shared/botMeta.ts';
-import { lastMoveInfo, RADIUS_OPTIONS } from '../lib/gameView.ts';
+import { lastMoveInfo } from '../lib/gameView.ts';
 import { playerName, savePlayerName } from '../lib/identity.ts';
 import { wait } from '../lib/motion.ts';
 import { useNarrow } from '../lib/useNarrow.ts';
@@ -114,13 +114,11 @@ export function HomeScreen() {
   const [botSide, setBotSide] = useState<SideChoice>('X');
   const [botId, setBotId] = useState<BotId>('rookie');
   const [botLevel, setBotLevel] = useState(3);
-  const [botRadius, setBotRadius] = useState<8 | 9>(9);
   const [botGen, setBotGen] = useState<number | null>(null);
   const [gens, setGens] = useState<{ generations: number[]; newest: number | null }>({ generations: [], newest: null });
 
   const [name, setName] = useState(playerName);
   const [roomSide, setRoomSide] = useState<SideChoice>('random');
-  const [roomRadius, setRoomRadius] = useState<8 | 9>(9);
   const [joinCode, setJoinCode] = useState('');
   const [joinError, setJoinError] = useState('');
 
@@ -128,13 +126,11 @@ export function HomeScreen() {
   const [watchOBot, setWatchOBot] = useState<BotId>('rookie');
   const [watchX, setWatchX] = useState(5);
   const [watchO, setWatchO] = useState(3);
-  const [watchRadius, setWatchRadius] = useState<8 | 9>(9);
   const [watchXGen, setWatchXGen] = useState<number | null>(null);
   const [watchOGen, setWatchOGen] = useState<number | null>(null);
   const [friendBot, setFriendBot] = useState<BotId>('rookie');
   const [friendBotLevel, setFriendBotLevel] = useState(3);
   const [friendBotSide, setFriendBotSide] = useState<SideChoice>('X');
-  const [friendBotRadius, setFriendBotRadius] = useState<8 | 9>(9);
 
   useEffect(() => {
     api.info().then(setInfo).catch(() => setInfo(null));
@@ -166,13 +162,13 @@ export function HomeScreen() {
   const createBotRoom = (e: FormEvent) => {
     e.preventDefault();
     savePlayerName(name);
-    navigate(`/room/new?side=${friendBotSide}&radius=${friendBotRadius}&bot=${friendBot}&level=${friendBotLevel}`);
+    navigate(`/room/new?side=${friendBotSide}&bot=${friendBot}&level=${friendBotLevel}`);
   };
 
   const createRoom = (e: FormEvent) => {
     e.preventDefault();
     savePlayerName(name);
-    navigate(`/room/new?side=${roomSide}&radius=${roomRadius}`);
+    navigate(`/room/new?side=${roomSide}`);
   };
 
   const joinRoom = (e: FormEvent) => {
@@ -238,14 +234,13 @@ export function HomeScreen() {
               onSubmit={(e) => {
                 e.preventDefault();
                 const gen = botId === 'hexnet' && botGen !== null ? `&gen=${botGen}` : '';
-                navigate(`/bot?bot=${botId}&side=${botSide}&level=${botLevel}&radius=${botRadius}${gen}`);
+                navigate(`/bot?bot=${botId}&side=${botSide}&level=${botLevel}${gen}`);
               }}
             >
               {bots.length > 1 && <Segmented label="Opponent" value={botId} options={botOptions} onChange={(id) => { setBotId(id); setBotLevel((l) => fit(id, l)); }} />}
               <Segmented label="Your side" value={botSide} options={SIDE_OPTIONS} onChange={setBotSide} />
               {botId === 'hexnet' && <GenerationSlider label="Six's generation" generations={gens.generations} newest={gens.newest} value={botGen} onChange={setBotGen} />}
               <Segmented label={isTimedBot(botId) ? `${BOT_META[botId].name} thinking time` : 'Rookie strength'} value={botLevel} options={levelOptions(botId)} onChange={setBotLevel} />
-              <Segmented label="Rules" value={botRadius} options={[...RADIUS_OPTIONS]} onChange={(v) => setBotRadius(v as 8 | 9)} />
               <button type="submit" className="button is-primary">Start match</button>
             </form>
           </RundownRow>
@@ -257,7 +252,6 @@ export function HomeScreen() {
                 <input id="player-name" className="text-input" value={name} maxLength={24} autoComplete="nickname" placeholder="Shown on the scoreboard" onChange={(e) => setName(e.target.value)} />
               </div>
               <Segmented label="Your side" value={roomSide} options={SIDE_OPTIONS} onChange={setRoomSide} />
-              <Segmented label="Rules" value={roomRadius} options={[...RADIUS_OPTIONS]} onChange={(v) => setRoomRadius(v as 8 | 9)} />
               <button type="submit" className="button is-primary">Create room</button>
             </form>
             <form className="join-form" onSubmit={joinRoom}>
@@ -306,7 +300,6 @@ export function HomeScreen() {
               {roomBotOptions.length > 1 && <Segmented label="Their opponent" value={friendBot} options={roomBotOptions} onChange={(id) => { setFriendBot(id); setFriendBotLevel((l) => fit(id, l)); }} />}
               <Segmented label={isTimedBot(friendBot) ? 'Thinking time' : 'Rookie strength'} value={friendBotLevel} options={levelOptions(friendBot)} onChange={setFriendBotLevel} />
               <Segmented label="Your friend's side" value={friendBotSide} options={SIDE_OPTIONS} onChange={setFriendBotSide} />
-              <Segmented label="Rules" value={friendBotRadius} options={[...RADIUS_OPTIONS]} onChange={(v) => setFriendBotRadius(v as 8 | 9)} />
               <button type="submit" className="button is-primary">Create room</button>
               <p className="notice">You get a link to send. When your friend opens it, they play the bot and you watch the game live.</p>
             </form>
@@ -320,7 +313,7 @@ export function HomeScreen() {
                 e.preventDefault();
                 const xg = watchXBot === 'hexnet' && watchXGen !== null ? `&xg=${watchXGen}` : '';
                 const og = watchOBot === 'hexnet' && watchOGen !== null ? `&og=${watchOGen}` : '';
-                navigate(`/watch?xb=${watchXBot}&x=${watchX}&ob=${watchOBot}&o=${watchO}&radius=${watchRadius}${xg}${og}`);
+                navigate(`/watch?xb=${watchXBot}&x=${watchX}&ob=${watchOBot}&o=${watchO}${xg}${og}`);
               }}
             >
               {bots.length > 1 && <Segmented label="X" value={watchXBot} options={botOptions} onChange={(id) => { setWatchXBot(id); setWatchX((l) => fit(id, l)); }} />}
@@ -329,7 +322,6 @@ export function HomeScreen() {
               {bots.length > 1 && <Segmented label="O" value={watchOBot} options={botOptions} onChange={(id) => { setWatchOBot(id); setWatchO((l) => fit(id, l)); }} />}
               {watchOBot === 'hexnet' && <GenerationSlider label="O: Six's generation" generations={gens.generations} newest={gens.newest} value={watchOGen} onChange={setWatchOGen} />}
               <Segmented label={`O: ${BOT_META[watchOBot].name} ${isTimedBot(watchOBot) ? 'thinking time' : 'strength'}`} value={watchO} options={levelOptions(watchOBot)} onChange={setWatchO} />
-              <Segmented label="Rules" value={watchRadius} options={[...RADIUS_OPTIONS]} onChange={(v) => setWatchRadius(v as 8 | 9)} />
               <p className="notice">SealBot, Strix and the other rival bots join this lineup once the test arena is built.</p>
               <button type="submit" className="button is-primary">Start broadcast</button>
             </form>

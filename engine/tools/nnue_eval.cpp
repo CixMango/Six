@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
   std::string line;
   while (std::getline(std::cin, line)) {
     std::istringstream in(line);
-    int radius = 9;
+    int radius = 8;
     if (!(in >> radius)) continue;
     six::Board board(radius);
     int q = 0;

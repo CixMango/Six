@@ -59,7 +59,7 @@ describe('rooms', () => {
   });
 
   function startGame() {
-    say(host, { type: 'room:create', radius: 9, side: 'X' });
+    say(host, { type: 'room:create', radius: 8, side: 'X' });
     const code = host.room!.code;
     say(guest, { type: 'room:join', code: code.toLowerCase() });
     return code;
@@ -205,12 +205,12 @@ describe('friend vs bot rooms', () => {
   });
 
   function open(friendSide: 'X' | 'O' = 'X') {
-    say(host, { type: 'room:create', radius: 9, side: friendSide, bot: { id: 'hexnet', level: 2, blunders: true } });
+    say(host, { type: 'room:create', radius: 8, side: friendSide, bot: { id: 'hexnet', level: 2, blunders: true } });
     say(friend, { type: 'room:join', code: host.room!.code });
   }
 
   it('seats the bot opposite the friend and keeps the host watching, not playing', () => {
-    say(host, { type: 'room:create', radius: 9, side: 'X', bot: { id: 'hexnet', level: 2 } });
+    say(host, { type: 'room:create', radius: 8, side: 'X', bot: { id: 'hexnet', level: 2 } });
     const waiting = host.room!;
     expect(waiting.status).toBe('waiting');
     expect(waiting.watching).toBe(true);
@@ -234,7 +234,7 @@ describe('friend vs bot rooms', () => {
     answers.push([[1, 0], [2, 0]]);
     place(friend, 0, 0);
     await settle();
-    expect(asked).toEqual([{ moves: [[0, 0]], radius: 9, bot: 'hexnet', level: 2 }]);
+    expect(asked).toEqual([{ moves: [[0, 0]], radius: 8, bot: 'hexnet', level: 2 }]);
     expect(host.room!.moves).toEqual([[0, 0], [1, 0], [2, 0]]);
     expect(friend.room!.moves).toEqual(host.room!.moves);
   });
@@ -310,9 +310,13 @@ describe('friend vs bot rooms', () => {
   });
 
   it('only bots that run on the server can be seated', () => {
-    expect(parseClientMessage('{"type":"room:create","radius":9,"side":"X","bot":{"id":"hexnet","level":2}}'))
-      .toEqual({ type: 'room:create', radius: 9, side: 'X', bot: { id: 'hexnet', level: 2 } });
-    expect(parseClientMessage('{"type":"room:create","radius":9,"side":"X","bot":{"id":"hexweb","level":2}}')).toBeNull();
-    expect(parseClientMessage('{"type":"room:create","radius":9,"side":"X","bot":{"id":"hexnet","level":9}}')).toBeNull();
+    expect(parseClientMessage('{"type":"room:create","radius":8,"side":"X","bot":{"id":"hexnet","level":2}}'))
+      .toEqual({ type: 'room:create', radius: 8, side: 'X', bot: { id: 'hexnet', level: 2 } });
+    expect(parseClientMessage('{"type":"room:create","radius":8,"side":"X","bot":{"id":"hexweb","level":2}}')).toBeNull();
+    expect(parseClientMessage('{"type":"room:create","radius":8,"side":"X","bot":{"id":"hexnet","level":9}}')).toBeNull();
+  });
+
+  it('new rooms are radius 8 only', () => {
+    expect(parseClientMessage('{"type":"room:create","radius":9,"side":"X"}')).toBeNull();
   });
 });

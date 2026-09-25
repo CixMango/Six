@@ -48,7 +48,6 @@ function BotPick({ side, bot, level, onBot, onLevel }: {
   );
 }
 
-/** The public site always plays HeXO's rules. */
 const RADIUS = 8;
 const EXHIBITION_MS = 500;
 const EXHIBITION_NAME = 'Six';

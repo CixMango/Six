@@ -78,7 +78,7 @@ export function parseClientMessage(raw: string): ClientMessage | null {
         ? { type: 'hello', clientId: v.clientId, name: cleanName(v.name) }
         : null;
     case 'room:create': {
-      if (!RADII.includes(v.radius as 8 | 9) || !(v.side === 'X' || v.side === 'O' || v.side === 'random')) return null;
+      if (!RADII.includes(v.radius as 8) || !(v.side === 'X' || v.side === 'O' || v.side === 'random')) return null;
       const base = { type: 'room:create' as const, radius: v.radius as number, side: v.side as SideChoice };
       if (v.bot === undefined) return base;
       // In a bot room, `side` is the joining friend's side.

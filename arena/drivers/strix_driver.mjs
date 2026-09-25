@@ -128,7 +128,7 @@ function chooseStone(moves, radius) {
   return [pick.q + oq, pick.r + or];
 }
 
-let radius = 9;
+let radius = 8;
 let moves = [];
 const send = line => process.stdout.write(`${line}\n`);
 const name = `Strix ${model} ${sims} sims${live ? ` live ${live}` : ""}`;
@@ -147,7 +147,7 @@ for await (const raw of createInterface({ input: process.stdin, crlfDelay: Infin
       defense?.resetPlayDefenseCaches();
     } else if (command === "position") {
       const r = words.indexOf("radius");
-      radius = r >= 0 ? Number(words[r + 1]) : 9;
+      radius = r >= 0 ? Number(words[r + 1]) : 8;
       const m = words.indexOf("moves");
       const numbers = m >= 0 ? words.slice(m + 1).map(Number) : [];
       moves = [];

@@ -83,15 +83,11 @@ export function takeBackTarget(game: Game, player: Player): number | null {
   return null;
 }
 
-export const RADIUS_OPTIONS = [
-  { value: 9, label: 'Radius 9' },
-  { value: 8, label: 'Radius 8 (HeXO)' },
-] as const;
-
 export const LEVEL_OPTIONS = [1, 2, 3, 4, 5].map((n) => ({ value: n, label: String(n) }));
 
+// Always 8, except a retry from an older saved game played at radius 9.
 export function parseRadius(value: string | null): 8 | 9 {
-  return value === '8' ? 8 : 9;
+  return value === '9' ? 9 : 8;
 }
 
 export function parseLevel(value: string | null, fallback = 3): number {

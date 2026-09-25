@@ -56,7 +56,7 @@ export function ReplaysScreen() {
           <section className="empty-state">
             <h2 className="empty-title">No games saved yet</h2>
             <p className="notice">Finish a game against Rookie, a friend, or start a bot match, and it lands here automatically.</p>
-            <Link href="/bot?side=X&level=3&radius=9" className="button is-primary">Play the bot</Link>
+            <Link href="/bot?side=X&level=3" className="button is-primary">Play the bot</Link>
           </section>
         )}
 
@@ -69,7 +69,6 @@ export function ReplaysScreen() {
                   <th scope="col" className="col-mode">Mode</th>
                   <th scope="col">X</th>
                   <th scope="col">O</th>
-                  <th scope="col" className="col-rules">Rules</th>
                   <th scope="col" className="num col-turns">Turns</th>
                   <th scope="col">Result</th>
                 </tr>
@@ -91,7 +90,6 @@ export function ReplaysScreen() {
                       <span className="team-chip is-o" aria-hidden="true" />
                       {r.players.O.name}
                     </td>
-                    <td className="col-rules">R{r.radius}</td>
                     <td className="num col-turns">{r.turns}</td>
                     <td>
                       {r.winner ? (

@@ -47,7 +47,7 @@ def run(bot: Bot, version: str = "rival") -> None:
             elif command == "newgame":
                 bot.new_game()
             elif command == "position":
-                radius = int(words[words.index("radius") + 1]) if "radius" in words else 9
+                radius = int(words[words.index("radius") + 1]) if "radius" in words else 8
                 numbers = [int(w) for w in words[words.index("moves") + 1 :]] if "moves" in words else []
                 game = Game(radius)
                 for i in range(0, len(numbers), 2):

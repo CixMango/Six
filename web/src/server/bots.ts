@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, renameSync } from 'node:fs';
 import path from 'node:path';
 import type { Hex } from '../shared/hex.ts';
-import { Game, otherPlayer, RADII, type Player } from '../shared/rules.ts';
+import { Game, otherPlayer, SAVED_RADII, type Player } from '../shared/rules.ts';
 import { chooseTurn } from '../shared/bots/rookie.ts';
 import { BOT_META, HEXBOT_MOVETIME_MS } from '../shared/botMeta.ts';
 import { evaluationFromScore, idleTurn, turnStart, type Evaluation } from '../shared/winChance.ts';
@@ -127,7 +127,7 @@ export function parseBotTurnRequest(body: unknown): BotTurnRequest {
     if (!Array.isArray(m) || m.length !== 2 || !m.every(Number.isInteger)) throw new Error('each move is [q, r]');
     return [m[0], m[1]] as [number, number];
   });
-  if (!RADII.includes(v.radius as 8 | 9)) throw new Error('radius must be 8 or 9');
+  if (!SAVED_RADII.includes(v.radius as 8 | 9)) throw new Error('radius must be 8');
   const bot = availableBots().find((b) => b.id === v.bot);
   if (!bot) throw new Error('unknown bot');
   const level = Number(v.level);

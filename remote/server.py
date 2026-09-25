@@ -120,7 +120,7 @@ def check_game(record: object) -> str | None:
     if not isinstance(record, dict):
         return "not an object"
     radius, moves, winner, rows = (record.get(k) for k in ("radius", "moves", "winner", "rows"))
-    if radius not in (8, 9) or not isinstance(record.get("opening"), int):
+    if radius != 8 or not isinstance(record.get("opening"), int):
         return "bad radius or opening"
     if winner not in ("X", "O", None):
         return "bad winner"

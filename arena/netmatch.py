@@ -44,7 +44,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--movetime-a", type=int, default=0, help="A's own time per turn (0: --movetime), for time odds")
     parser.add_argument("--movetime-b", type=int, default=0)
     parser.add_argument("--pairs", type=int, default=20)
-    parser.add_argument("--radius", type=int, default=8, choices=(8, 9))
+    parser.add_argument("--radius", type=int, default=8, choices=(8,))
     parser.add_argument("--concurrency", type=int, default=2)
     parser.add_argument("--max-stones", type=int, default=400)
     parser.add_argument("--seed", type=int, default=2026)

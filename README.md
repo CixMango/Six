@@ -2,7 +2,7 @@
 
 Hex tic-tac-toe (Connect6 on an endless hex grid) with a bot that learned the game by playing itself.
 
-X opens with one stone, then each player places two stones per turn. First to six in a row wins. Stones can go anywhere within 9 steps of a stone already on the board (8 on [HeXO](https://hexo.did.science)).
+X opens with one stone, then each player places two stones per turn. First to six in a row wins. Stones can go anywhere within 8 steps of a stone already on the board.
 
 Play it in the browser at **https://playsix.cixmango.workers.dev**, or download it and let the bot think harder on your own GPU.
 

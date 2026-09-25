@@ -1,10 +1,10 @@
 """Plays HexBot against itself to make training games, recording the search score of every turn.
 
-Openings are random clustered positions of varying length (no side holding four), and the
-radius alternates between 8 and 9, so the games cover a wide spread of positions.
+Openings are random clustered positions of varying length (no side holding four), so the games
+cover a wide spread of positions.
 Games go to data/selfplay/<run>/games-<worker>.jsonl, one JSON object per line:
 
-  {"radius": 9, "opening": 7, "moves": [[q, r], ...], "winner": "X" | "O" | null,
+  {"radius": 8, "opening": 7, "moves": [[q, r], ...], "winner": "X" | "O" | null,
    "turns": [{"at": 7, "score": 120, "depth": 5, "nodes": 81234}, ...]}
 
 `at` is the index of the turn's first stone in `moves`; `score` is from the mover's view
@@ -43,7 +43,7 @@ def random_opening(rng: random.Random, radius: int) -> list[Cell]:
 
 
 def play(client: EngineClient, rng: random.Random, movetime: int, max_stones: int) -> dict:
-    radius = rng.choice((8, 9))
+    radius = 8
     opening = random_opening(rng, radius)
     game = Game(radius)
     for m in opening:

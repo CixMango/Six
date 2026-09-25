@@ -129,7 +129,7 @@ def main() -> int:
     parser.add_argument("engine_a")
     parser.add_argument("engine_b")
     parser.add_argument("--pairs", type=int, default=50)
-    parser.add_argument("--radius", type=int, default=8, choices=(8, 9))
+    parser.add_argument("--radius", type=int, default=8, choices=(8,))
     parser.add_argument("--concurrency", type=int, default=4)
     parser.add_argument("--max-stones", type=int, default=400)
     parser.add_argument("--sprt", type=float, nargs=2, metavar=("ELO0", "ELO1"))
