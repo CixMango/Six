@@ -1,0 +1,6 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "extraPaths": ["trainer", "arena"],
+  "exclude": ["rivals", "web", "data", "runs", "engine/build", "**/node_modules"]
+}

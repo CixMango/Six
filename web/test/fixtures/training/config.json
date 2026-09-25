@@ -1,0 +1,6 @@
+{
+  "pauseApps": [
+    "obs64.exe"
+  ],
+  "threads": 48
+}

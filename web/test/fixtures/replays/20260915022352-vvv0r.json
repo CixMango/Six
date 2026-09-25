@@ -1,0 +1,1 @@
+{"format":"six-replay","version":1,"id":"20260915022352-vvv0r","createdAt":"2026-09-15T02:23:52.789Z","mode":"online","radius":9,"players":{"X":{"name":"Levi","kind":"human"},"O":{"name":"Sam","kind":"human"}},"moves":[[0,0],[0,5],[1,5],[-1,-3],[4,-4],[2,5],[3,5],[-1,-5],[7,-6],[4,5],[5,5]],"result":{"winner":"O","reason":"six"}}

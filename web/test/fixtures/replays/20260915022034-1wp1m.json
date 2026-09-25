@@ -1,0 +1,1 @@
+{"format":"six-replay","version":1,"id":"20260915022034-1wp1m","createdAt":"2026-09-15T02:20:34.288Z","mode":"bot","radius":9,"players":{"X":{"name":"You","kind":"human"},"O":{"name":"Rookie 3","kind":"bot","bot":"rookie:3"}},"moves":[[0,0],[-1,1],[0,1]],"result":{"winner":"O","reason":"resign"}}

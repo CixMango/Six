@@ -1,0 +1,206 @@
+{
+  "fixture": "synthetic history for screenshots and tests; not a measurement",
+  "generation": 7,
+  "history": [
+    {
+      "generation": 1,
+      "finished": "2026-09-15T09:17:00",
+      "selfplay": {
+        "games": 600,
+        "rows": 14810,
+        "xWins": 277,
+        "oWins": 267,
+        "unfinished": 49,
+        "medianStones": 69
+      },
+      "training": {
+        "steps": 68,
+        "validation": {
+          "policy": 1.55,
+          "opponent": 2.85,
+          "value": 0.598,
+          "score": 0.084,
+          "loss": 2.5
+        }
+      },
+      "evaluation": {
+        "vsPrevious": {
+          "wins": 26,
+          "losses": 14,
+          "elo": 92,
+          "eloLow": -8,
+          "eloHigh": 190
+        }
+      }
+    },
+    {
+      "generation": 2,
+      "finished": "2026-09-15T10:34:00",
+      "selfplay": {
+        "games": 600,
+        "rows": 15420,
+        "xWins": 274,
+        "oWins": 272,
+        "unfinished": 40,
+        "medianStones": 67
+      },
+      "training": {
+        "steps": 76,
+        "validation": {
+          "policy": 1.48,
+          "opponent": 2.8,
+          "value": 0.586,
+          "score": 0.078,
+          "loss": 2.4
+        }
+      },
+      "evaluation": {
+        "vsPrevious": {
+          "wins": 24,
+          "losses": 16,
+          "elo": 61,
+          "eloLow": -35,
+          "eloHigh": 158
+        }
+      }
+    },
+    {
+      "generation": 3,
+      "finished": "2026-09-15T11:51:00",
+      "selfplay": {
+        "games": 600,
+        "rows": 16030,
+        "xWins": 271,
+        "oWins": 277,
+        "unfinished": 31,
+        "medianStones": 65
+      },
+      "training": {
+        "steps": 84,
+        "validation": {
+          "policy": 1.41,
+          "opponent": 2.75,
+          "value": 0.574,
+          "score": 0.072,
+          "loss": 2.3
+        }
+      },
+      "evaluation": {
+        "vsPrevious": {
+          "wins": 28,
+          "losses": 12,
+          "elo": 118,
+          "eloLow": 22,
+          "eloHigh": 216
+        }
+      }
+    },
+    {
+      "generation": 4,
+      "finished": "2026-09-15T12:08:00",
+      "selfplay": {
+        "games": 600,
+        "rows": 16640,
+        "xWins": 268,
+        "oWins": 282,
+        "unfinished": 22,
+        "medianStones": 63
+      },
+      "training": {
+        "steps": 92,
+        "validation": {
+          "policy": 1.34,
+          "opponent": 2.7,
+          "value": 0.562,
+          "score": 0.066,
+          "loss": 2.2
+        }
+      },
+      "evaluation": {
+        "vsPrevious": {
+          "wins": 19,
+          "losses": 21,
+          "elo": -14,
+          "eloLow": -110,
+          "eloHigh": 82
+        }
+      }
+    },
+    {
+      "generation": 5,
+      "finished": "2026-09-15T13:25:00",
+      "selfplay": {
+        "games": 600,
+        "rows": 17250,
+        "xWins": 265,
+        "oWins": 287,
+        "unfinished": 13,
+        "medianStones": 61
+      },
+      "training": {
+        "steps": 100,
+        "validation": {
+          "policy": 1.27,
+          "opponent": 2.65,
+          "value": 0.55,
+          "score": 0.06,
+          "loss": 2.1
+        }
+      },
+      "evaluation": {
+        "vsPrevious": {
+          "wins": 25,
+          "losses": 15,
+          "elo": 74,
+          "eloLow": -21,
+          "eloHigh": 171
+        },
+        "vsHexBot": {
+          "wins": 23,
+          "losses": 17,
+          "elo": 52,
+          "eloLow": -41,
+          "eloHigh": 148
+        }
+      }
+    },
+    {
+      "generation": 6,
+      "finished": "2026-09-15T14:42:00",
+      "selfplay": {
+        "games": 600,
+        "rows": 17860,
+        "xWins": 262,
+        "oWins": 292,
+        "unfinished": 6,
+        "medianStones": 59
+      },
+      "training": {
+        "steps": 108,
+        "validation": {
+          "policy": 1.2,
+          "opponent": 2.6,
+          "value": 0.538,
+          "score": 0.054,
+          "loss": 2.0
+        }
+      },
+      "evaluation": {
+        "vsPrevious": {
+          "wins": 29,
+          "losses": 11,
+          "elo": 143,
+          "eloLow": 49,
+          "eloHigh": 244
+        },
+        "vsHexBot": {
+          "wins": 23,
+          "losses": 17,
+          "elo": 52,
+          "eloLow": -41,
+          "eloHigh": 148
+        }
+      }
+    }
+  ]
+}

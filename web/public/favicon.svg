@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Six mark: a numeral 6 whose loop is a pointy-top hexagon and whose tail is
+       that hexagon's upper-left edge carried past the top corner; X's opening
+       stone, a flat hexagon, sits inside. Authored vector; every raster is rendered from this file. -->
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b2232"/>
+      <stop offset="1" stop-color="#090c13"/>
+    </linearGradient>
+    <radialGradient id="stone-light" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffc42c" stop-opacity="0.55"/>
+      <stop offset="0.45" stop-color="#ffc42c" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#ffc42c" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+  </defs>
+
+  <!-- Plate: a rounded pointy-top hexagon, like a tile under the floodlights. -->
+  <path d="M128 14 L226.7 71 L226.7 185 L128 242 L29.3 185 L29.3 71 Z"
+        fill="url(#plate)" stroke="#0d111a" stroke-width="14" stroke-linejoin="round"/>
+  <path d="M128 24 L218 76 L218 180 L128 232 L38 180 L38 76 Z"
+        fill="none" stroke="#ffffff" stroke-opacity="0.09" stroke-width="2" stroke-linejoin="round"/>
+
+  <g transform="translate(128 128) scale(0.9) translate(-128 -128)">
+    <!-- Light from the stone onto the plate. -->
+    <circle cx="128" cy="141" r="52" fill="url(#stone-light)"/>
+
+    <!-- The 6: tail from the upper right, down the long edge, around the hexagon loop. -->
+    <path d="M173 63 L83 115 L83 167 L128 193 L173 167 L173 115 L128 89"
+          fill="none" stroke="#6cc6f5" stroke-opacity="0.55" stroke-width="24"
+          stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+    <path d="M173 63 L83 115 L83 167 L128 193 L173 167 L173 115 L128 89"
+          fill="none" stroke="#8fd5f8" stroke-width="22"
+          stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- X's opening stone: a flat pointy-top hexagon, like the stones on the board. -->
+    <path d="M128 118 L147.9 129.5 L147.9 152.5 L128 164 L108.1 152.5 L108.1 129.5 Z" fill="#f6d04a"/>
+  </g>
+</svg>

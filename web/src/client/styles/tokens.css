@@ -1,0 +1,122 @@
+:root {
+  /* --h and --c (hue and chroma) are overridden per theme. */
+  --h: 262;
+  --c: 1;
+  --ground: oklch(0.115 calc(0.014 * var(--c)) var(--h));
+  --ground-2: oklch(0.15 calc(0.016 * var(--c)) var(--h));
+  --plate: oklch(0.19 calc(0.018 * var(--c)) var(--h));
+  --plate-2: oklch(0.235 calc(0.02 * var(--c)) var(--h));
+  --plate-3: oklch(0.29 calc(0.022 * var(--c)) var(--h));
+  --hairline: oklch(0.36 calc(0.02 * var(--c)) var(--h));
+  --hairline-soft: oklch(0.27 calc(0.018 * var(--c)) var(--h));
+
+  --text: oklch(0.97 calc(0.004 * var(--c)) var(--h));
+  --text-2: oklch(0.84 calc(0.012 * var(--c)) var(--h));
+  --text-3: oklch(0.72 calc(0.016 * var(--c)) var(--h));
+  --primary-hover: oklch(0.9 calc(0.01 * var(--c)) var(--h));
+  --panel: oklch(0.15 calc(0.016 * var(--c)) var(--h) / 0.96);
+  --vignette: oklch(0 0 0 / 0.55);
+
+  /* Team colors */
+  --x: oklch(0.88 0.165 93);
+  --x-deep: oklch(0.74 0.15 85);
+  --x-ink: oklch(0.22 0.05 90);
+  --x-wash: oklch(0.88 0.165 93 / 0.14);
+  --o: oklch(0.83 0.105 226);
+  --o-deep: oklch(0.66 0.12 234);
+  --o-ink: oklch(0.2 0.04 230);
+  --o-wash: oklch(0.83 0.105 226 / 0.14);
+
+  /* Reserved for LIVE and destructive confirmation. */
+  --live: oklch(0.64 0.21 27);
+  /* Error text and the review labels for game-losing moves. */
+  --error-text: oklch(0.8 0.12 27);
+
+  --font: 'Archivo Variable', 'Archivo', system-ui, sans-serif;
+
+  /* Type scale, ratio ~1.2 */
+  --step--2: 0.6875rem;
+  --step--1: 0.8125rem;
+  --step-0: 0.9375rem;
+  --step-1: 1.125rem;
+  --step-2: 1.35rem;
+  --step-3: 1.625rem;
+  --step-4: 2.25rem;
+  --step-5: 3.25rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  /* Side gutter, respecting notches. */
+  --edge: max(var(--space-4), env(safe-area-inset-left));
+
+  --radius: 3px;
+  --shadow-plate: 0 10px 28px -10px oklch(0 0 0 / 0.7), 0 2px 6px -2px oklch(0 0 0 / 0.5);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 160ms;
+  --dur: 220ms;
+  --dur-slow: 420ms;
+}
+
+/* ---------- Themes (Settings > Theme) ---------- */
+/* Dark: no hue tint */
+:root[data-theme='dark'] {
+  --c: 0;
+}
+
+/* Midnight */
+:root[data-theme='midnight'] {
+  --h: 266;
+  --c: 2.4;
+  --ground: oklch(0.08 0.03 266);
+}
+
+/* Neon */
+:root[data-theme='neon'] {
+  --h: 300;
+  --c: 2.2;
+  --x: oklch(0.9 0.19 96);
+  --x-wash: oklch(0.9 0.19 96 / 0.16);
+  --o: oklch(0.84 0.13 218);
+  --o-wash: oklch(0.84 0.13 218 / 0.16);
+}
+
+/* Deep Sea */
+:root[data-theme='deepsea'] {
+  --h: 208;
+  --c: 1.5;
+}
+
+/* Light: team colors deepen to stay readable on white. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --ground: oklch(0.93 0.008 262);
+  --ground-2: oklch(0.9 0.01 262);
+  --plate: oklch(0.99 0.003 262);
+  --plate-2: oklch(0.95 0.008 262);
+  --plate-3: oklch(0.89 0.012 262);
+  --hairline: oklch(0.76 0.016 262);
+  --hairline-soft: oklch(0.85 0.012 262);
+  --text: oklch(0.2 0.02 262);
+  --text-2: oklch(0.36 0.022 262);
+  --text-3: oklch(0.47 0.022 262);
+  --primary-hover: oklch(0.32 0.02 262);
+  --error-text: oklch(0.5 0.17 27);
+  --panel: oklch(0.97 0.006 262 / 0.96);
+  --vignette: oklch(0.35 0.03 262 / 0.16);
+  --x: oklch(0.62 0.15 72);
+  --x-deep: oklch(0.54 0.14 68);
+  --x-ink: oklch(0.16 0.04 80);
+  --x-wash: oklch(0.72 0.16 80 / 0.18);
+  --o: oklch(0.55 0.14 242);
+  --o-deep: oklch(0.47 0.14 246);
+  --o-ink: oklch(0.99 0.01 230);
+  --o-wash: oklch(0.6 0.13 240 / 0.16);
+  --shadow-plate: 0 10px 28px -12px oklch(0.3 0.03 262 / 0.28), 0 2px 6px -2px oklch(0.3 0.03 262 / 0.18);
+}

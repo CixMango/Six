@@ -1,0 +1,7 @@
+2026-09-15 14:02:11  generation 6: training 118 steps on generations 1-6
+2026-09-15 14:05:40  train 7: exported net.onnx (ONNX Runtime vs PyTorch 1.2e-02)
+2026-09-15 14:05:41  generation 6: eval 7 vs 6, 20 pairs at 300 ms
+2026-09-15 14:11:02  generation 7: {vsPrevious: 29-11, +143 Elo [+49, +244]}
+2026-09-15 14:11:03  generation 7: self-play, 600 games to go
+2026-09-15 14:13:20  selfplay 7: 100 games, 2710/hour, 2480 rows, 6120 evals/s, average batch 402
+2026-09-15 14:15:31  selfplay 7: 200 games, 2744/hour, 5012 rows, 6188 evals/s, average batch 405

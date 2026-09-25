@@ -1,0 +1,50 @@
+[
+  {
+    "when": "2026-09-15T18:07:16",
+    "ours": "HexNet gen-0009/net 1000ms",
+    "generation": 9,
+    "rival": "Shrimp 256v",
+    "pairs": 6,
+    "wins": 12,
+    "losses": 0,
+    "draws": 0,
+    "forfeits": 0,
+    "elo": 305.4,
+    "eloLow": 109.6,
+    "eloHigh": null,
+    "run": "20260915-173928-hexnet-gen-0009-net-1000ms-vs-shrimp-256v",
+    "note": "Our side shared the GPU with self-play"
+  },
+  {
+    "when": "2026-09-15T18:30:03",
+    "ours": "HexNet gen-0011/net 2000ms",
+    "generation": 11,
+    "rival": "Shrimp 512v",
+    "pairs": 4,
+    "wins": 8,
+    "losses": 0,
+    "draws": 0,
+    "forfeits": 0,
+    "elo": 249.3,
+    "eloLow": 39.0,
+    "eloHigh": null,
+    "run": "20260915-180734-hexnet-gen-0011-net-2000ms-vs-shrimp-512v",
+    "note": "Shrimp's own evaluation setting; our side shared the GPU with self-play"
+  },
+  {
+    "when": "2026-09-15T18:43:05",
+    "ours": "HexNet gen-0013/net 2000ms",
+    "generation": 13,
+    "rival": "Strix 256 sims live strong",
+    "pairs": 6,
+    "wins": 12,
+    "losses": 0,
+    "draws": 0,
+    "forfeits": 0,
+    "elo": 305.4,
+    "eloLow": 109.6,
+    "eloHigh": null,
+    "run": "20260915-183024-hexnet-gen-0013-net-2000ms-vs-strix-256-sims",
+    "note": "Strix's forcing layer at strong difficulty; our side shared the GPU with self-play"
+  }
+]

@@ -1,0 +1,39 @@
+{
+  "name": "six",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Six: hex tic-tac-toe, played locally, with friends over Hamachi, and against HexBot.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/server/main.ts",
+    "dev:watch": "tsx watch --clear-screen=false src/server/main.ts",
+    "build": "vite build",
+    "start": "tsx src/server/main.ts --prod",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "check": "npm run typecheck && npm test",
+    "test:fast": "vitest run --exclude test/browserBot.test.ts --exclude test/engine.test.ts",
+    "test:engine": "vitest run test/browserBot.test.ts test/engine.test.ts"
+  },
+  "dependencies": {
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "lucide-react": "^1.46.0",
+    "onnxruntime-web": "^1.30.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tsx": "^4.23.13",
+    "vite": "^8.3.0",
+    "wouter": "^3.11.0",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.5.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/ws": "^8.18.1",
+    "fast-check": "^4.10.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
+  }
+}

@@ -1,0 +1,13 @@
+// node scripts/build-play.mjs && npx.cmd wrangler deploy --config deploy/wrangler.jsonc
+// Static site plus worker.js for /api/hexo/*.
+{
+  "name": "playsix",
+  "compatibility_date": "2026-09-21",
+  "main": "worker.js",
+  "assets": {
+    "directory": "../dist/play",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  }
+}
