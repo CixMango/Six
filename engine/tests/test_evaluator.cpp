@@ -70,10 +70,14 @@ void checkAgainstPyTorch(six::Device device) {
 TEST_CASE("evaluator: CPU outputs match PyTorch on fixture positions") { checkAgainstPyTorch(six::Device::Cpu); }
 
 TEST_CASE("evaluator: CUDA outputs match PyTorch (set SIX_TEST_CUDA=1 with CUDA DLLs on PATH)") {
+#ifdef _WIN32
   char* flag = nullptr;
   std::size_t length = 0;
   const bool enabled = _dupenv_s(&flag, &length, "SIX_TEST_CUDA") == 0 && flag != nullptr;
   std::free(flag);
+#else
+  const bool enabled = std::getenv("SIX_TEST_CUDA") != nullptr;
+#endif
   if (enabled) checkAgainstPyTorch(six::Device::Cuda);
 }
 
