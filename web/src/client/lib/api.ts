@@ -85,6 +85,13 @@ export const api = {
       body: JSON.stringify({ moves: moves.map((m) => [m.q, m.r]), radius, movetime }),
       signal,
     }),
+  /** A turn that avoids the forced win the played turn handed over (solver-checked), or [] if none was found. */
+  reviewDefense: (moves: readonly Hex[], played: readonly Hex[], radius: number, signal?: AbortSignal) =>
+    request<{ best: Array<[number, number]> }>('/api/review/defense', {
+      method: 'POST',
+      body: JSON.stringify({ moves: moves.map((m) => [m.q, m.r]), played: played.map((m) => [m.q, m.r]), radius }),
+      signal,
+    }).then((r) => r.best.map(([q, r2]) => ({ q, r: r2 }))),
   generations: () => request<{ generations: number[]; newest: number | null }>('/api/generations'),
   /** `generation` (Six only) picks an older net; its first turn may take a minute to load. */
   botTurn: (moves: readonly Hex[], radius: number, bot: string, level: number, signal?: AbortSignal, generation?: number | null): Promise<Hex[]> =>

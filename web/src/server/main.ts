@@ -5,7 +5,7 @@ import path from 'node:path';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { parseClientMessage, type ServerMessage } from '../shared/protocol.ts';
 import { validateReplay } from '../shared/replay.ts';
-import { availableBots, botTurn, evaluatePosition, generationOf, REVIEW_MS, reviewPosition, listGenerations, newestNetwork, parseBotTurnRequest, precheckTurn, provenWinner } from './bots.ts';
+import { availableBots, botTurn, evaluatePosition, generationOf, REVIEW_MS, reviewDefense, reviewPosition, listGenerations, newestNetwork, parseBotTurnRequest, precheckTurn, provenWinner } from './bots.ts';
 import { localAddresses } from './network.ts';
 import { ReplayStore } from './replayStore.ts';
 import { importGame, importHexo } from './hexo.ts';
@@ -104,6 +104,12 @@ async function api(req: IncomingMessage, res: ServerResponse, url: URL): Promise
       const movetime = Number(body.movetime ?? 1000);
       if (!Number.isInteger(movetime) || movetime < REVIEW_MS.min || movetime > REVIEW_MS.max) throw new Error('bad movetime');
       return sendJson(res, 200, await reviewPosition(request.moves, request.radius, movetime));
+    }
+    if (route === 'POST /api/review/defense') {
+      const body = (await readJson(req)) as { moves?: unknown; played?: unknown; radius?: unknown };
+      const request = parseBotTurnRequest({ moves: body.moves, radius: body.radius, bot: 'rookie', level: 1 });
+      const played = parseBotTurnRequest({ moves: body.played, radius: body.radius, bot: 'rookie', level: 1 }).moves;
+      return sendJson(res, 200, { best: await reviewDefense(request.moves, played, request.radius) });
     }
     if (route === 'POST /api/eval') {
       // Same validation as a bot turn request, minus the bot.

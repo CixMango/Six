@@ -315,10 +315,16 @@ export async function reviewPosition(moves: Array<[number, number]>, radius: num
   if (score === null) throw new Error('The engine gave no evaluation.');
   const evaluation = evaluationFromScore(score, game.current, net ? 'six' : 'classic');
   const proven = evaluation.proven ?? (await provenWinner(moves, radius));
+  let best = cells.map((c) => [c.q, c.r] as [number, number]);
+  // The side to move has a forced win the network's search didn't find: show the solver's winning turn instead.
+  if (proven === game.current && evaluation.proven !== proven) {
+    const line = await solverLine(moves, radius);
+    if (line.proven === proven && line.cells.length > 0) best = line.cells;
+  }
   const facts: ReviewFacts = {
     winX: proven ? (proven === 'X' ? 1 : 0) : evaluation.winX,
     proven,
-    best: cells.map((c) => [c.q, c.r] as [number, number]),
+    best,
   };
   reviewCache.set(key, facts);
   if (reviewCache.size > 2000) reviewCache.delete(reviewCache.keys().next().value!);
@@ -327,6 +333,37 @@ export async function reviewPosition(moves: Array<[number, number]>, radius: num
 
 // Six Classic's exact threat search proves forced wins well within this.
 export const VERDICT_MOVETIME_MS = 400;
+const lineCache = new Map<string, { proven: Player | null; cells: Array<[number, number]> }>();
+
+// Six Classic's turn and verdict with the full judging time: its alpha-beta plays proven wins and exact defences.
+async function solverLine(moves: Array<[number, number]>, radius: number): Promise<{ proven: Player | null; cells: Array<[number, number]> }> {
+  const key = `${radius}|${moves.join(' ')}`;
+  const known = lineCache.get(key);
+  if (known) return known;
+  const game = Game.fromMoves(moves.map(([q, r]) => ({ q, r })), radius);
+  if (!hexbotAvailable() || game.winner) return { proven: game.winner, cells: [] };
+  verdictEngine ??= new EngineProcess(ENGINE_EXE, [], undefined, EVAL_SETUP);
+  const { cells, score } = await verdictEngine.search(game.moves, radius, EVAL_MOVETIME_MS);
+  const line = {
+    proven: score === null ? null : evaluationFromScore(score, game.current, 'classic').proven,
+    cells: cells.map((c) => [c.q, c.r] as [number, number]),
+  };
+  lineCache.set(key, line);
+  if (lineCache.size > 500) lineCache.delete(lineCache.keys().next().value!);
+  return line;
+}
+
+// For a turn that handed the opponent a forced win: a different turn after which they have none, or [] if the
+// solver finds none in time.
+export async function reviewDefense(moves: Array<[number, number]>, played: Array<[number, number]>, radius: number): Promise<Array<[number, number]>> {
+  const game = Game.fromMoves(moves.map(([q, r]) => ({ q, r })), radius);
+  if (game.winner) return [];
+  const opponent = otherPlayer(game.current);
+  const line = await solverLine(moves, radius);
+  const same = line.cells.length === played.length && line.cells.every(([q, r]) => played.some(([pq, pr]) => pq === q && pr === r));
+  if (line.cells.length === 0 || same || line.proven === opponent) return [];
+  return (await provenWinner([...moves, ...line.cells], radius)) === opponent ? [] : line.cells;
+}
 // Own CPU process, so the verdict never waits on the GPU, the judge or a bot.
 let verdictEngine: EngineProcess | null = null;
 const verdictCache = new Map<string, Player | null>();

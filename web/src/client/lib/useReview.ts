@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Hex } from '../../shared/hex.ts';
 import type { Player } from '../../shared/rules.ts';
-import { reviewGame, turnsOf, type GameReview, type PositionFacts } from '../../shared/review.ts';
+import { otherPlayer, type Player as Side } from '../../shared/rules.ts';
+import { reviewGame, turnsOf, type GameReview, type PositionFacts, type Turn } from '../../shared/review.ts';
 import { api } from './api.ts';
 
 /** Search time per position for the quick review and for "look deeper". */
@@ -20,6 +21,23 @@ export async function factsFor(moves: readonly Hex[], radius: number, ms: number
   const best = await browserTurn(moves, radius, ms, signal);
   const judged = await browserEvaluate(moves, radius, signal);
   return { winX: judged.winX, proven: judged.proven, best };
+}
+
+const sameCells = (a: readonly Hex[], b: readonly Hex[]) =>
+  a.length === b.length && a.every((x) => b.some((y) => y.q === x.q && y.r === x.r));
+
+// A turn that handed over a forced win when Six's own pick was that same turn has no better turn to show; ask the
+// solver for a defence instead (app only).
+async function withDefense(turn: Turn, before: PositionFacts, after: PositionFacts, moves: readonly Hex[], radius: number,
+  source: ReviewSource, signal: AbortSignal): Promise<PositionFacts> {
+  const them: Side = otherPlayer(turn.mover);
+  if (source !== 'server' || after.proven !== them || before.proven === them || !sameCells(before.best, turn.stones)) return before;
+  try {
+    const best = await api.reviewDefense(moves.slice(0, turn.start), turn.stones, radius, signal);
+    return best.length ? { ...before, best } : before;
+  } catch {
+    return before;
+  }
 }
 
 export interface ReviewState {
@@ -49,14 +67,20 @@ export function useReview(moves: readonly Hex[], radius: number, names: Record<P
     setDeep(new Set());
     setError('');
     const controller = new AbortController();
+    const got: PositionFacts[] = [];
     (async () => {
       for (let i = 0; i < positions.length; i++) {
         try {
           const f = await factsFor(moves.slice(0, positions[i]), radius, QUICK_MS, source, controller.signal);
           if (controller.signal.aborted) return;
+          got[i] = f;
+          const fixed = i > 0 ? await withDefense(turns[i - 1]!, got[i - 1]!, f, moves, radius, source, controller.signal) : null;
+          if (controller.signal.aborted) return;
+          if (fixed) got[i - 1] = fixed;
           setFacts((prev) => {
             const next = [...prev];
             next[i] = f;
+            if (fixed) next[i - 1] = fixed;
             return next;
           });
         } catch (e) {
@@ -86,8 +110,10 @@ export function useReview(moves: readonly Hex[], radius: number, names: Record<P
     setDeepening(turn);
     (async () => {
       try {
-        const [before, after] = await Promise.all([turn, turn + 1].map((i) =>
+        const [deepBefore, after] = await Promise.all([turn, turn + 1].map((i) =>
           factsFor(moves.slice(0, positions[i]), radius, DEEP_MS, source, controller.signal)));
+        if (controller.signal.aborted) return;
+        const before = await withDefense(turns[turn]!, deepBefore!, after!, moves, radius, source, controller.signal);
         if (controller.signal.aborted) return;
         setFacts((prev) => {
           const next = [...prev];
@@ -102,7 +128,7 @@ export function useReview(moves: readonly Hex[], radius: number, names: Record<P
         if (deepAbort.current === controller) setDeepening(null);
       }
     })();
-  }, [moves, radius, source, positions]);
+  }, [moves, radius, source, positions, turns]);
 
   useEffect(() => () => deepAbort.current?.abort(), []);
 
