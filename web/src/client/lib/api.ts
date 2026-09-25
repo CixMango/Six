@@ -92,7 +92,8 @@ export const api = {
       body: JSON.stringify({ moves: moves.map((m) => [m.q, m.r]), played: played.map((m) => [m.q, m.r]), radius }),
       signal,
     }).then((r) => r.best.map(([q, r2]) => ({ q, r: r2 }))),
-  generations: () => request<{ generations: number[]; newest: number | null }>('/api/generations'),
+  /** `downloadable`: published generations not on this PC yet; one downloads the first time it's played. */
+  generations: () => request<{ generations: number[]; downloadable?: number[]; newest: number | null }>('/api/generations'),
   /** `generation` (Six only) picks an older net; its first turn may take a minute to load. */
   botTurn: (moves: readonly Hex[], radius: number, bot: string, level: number, signal?: AbortSignal, generation?: number | null): Promise<Hex[]> =>
     bot === 'hexweb'

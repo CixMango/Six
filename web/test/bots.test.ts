@@ -57,7 +57,28 @@ describe('network bot', () => {
     expect(exported).toEqual([]);
     expect(await generationNetwork(3, runs, exportNet)).toBe(path.join(runs, 'gen-0003', 'net.onnx'));
     expect(exported).toEqual([path.join(runs, 'gen-0003', 'net.pt')]);
-    await expect(generationNetwork(9, runs, exportNet)).rejects.toThrow(/generation 9/);
+    const none = async () => [];
+    await expect(generationNetwork(9, runs, exportNet, undefined, none)).rejects.toThrow(/generation 9/);
+  });
+
+  it('downloads a published generation that is not on this PC, once', async () => {
+    const runs = path.join(dir, 'rl-download');
+    const fetched: number[] = [];
+    const download = async (gen: number, file: string) => {
+      fetched.push(gen);
+      await mkdir(path.dirname(file), { recursive: true });
+      await writeFile(file, 'downloaded');
+    };
+    const published = async () => [10, 20];
+    const noExport = async () => {
+      throw new Error('nothing to export');
+    };
+    const net = path.join(runs, 'gen-0020', 'net.onnx');
+    expect(await generationNetwork(20, runs, noExport, download, published)).toBe(net);
+    expect(await generationNetwork(20, runs, noExport, download, published)).toBe(net);
+    expect(fetched).toEqual([20]);
+    expect(listGenerations(runs)).toEqual([20]);
+    await expect(generationNetwork(30, runs, noExport, download, published)).rejects.toThrow(/generation 30/);
   });
 
   it('knows the network bot by id and gives it thinking-time levels', () => {

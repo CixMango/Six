@@ -5,7 +5,7 @@ import path from 'node:path';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { parseClientMessage, type ServerMessage } from '../shared/protocol.ts';
 import { validateReplay } from '../shared/replay.ts';
-import { availableBots, botTurn, evaluatePosition, generationOf, REVIEW_MS, reviewDefense, reviewPosition, listGenerations, newestNetwork, parseBotTurnRequest, precheckTurn, provenWinner } from './bots.ts';
+import { availableBots, botTurn, downloadableGenerations, evaluatePosition, generationOf, REVIEW_MS, reviewDefense, reviewPosition, listGenerations, newestNetwork, parseBotTurnRequest, precheckTurn, provenWinner } from './bots.ts';
 import { localAddresses } from './network.ts';
 import { ReplayStore } from './replayStore.ts';
 import { importGame, importHexo } from './hexo.ts';
@@ -84,7 +84,10 @@ async function api(req: IncomingMessage, res: ServerResponse, url: URL): Promise
     if (route === 'GET /api/info') return sendJson(res, 200, info());
     if (route === 'GET /api/bots') return sendJson(res, 200, availableBots());
     if (route === 'GET /api/generations') {
-      return sendJson(res, 200, { generations: listGenerations(), newest: generationOf(newestNetwork()) });
+      const local = listGenerations();
+      const downloadable = (await downloadableGenerations()).filter((g) => !local.includes(g));
+      const generations = [...local, ...downloadable].sort((a, b) => a - b);
+      return sendJson(res, 200, { generations, downloadable, newest: generationOf(newestNetwork()) });
     }
     if (route === 'POST /api/bot/turn') {
       const request = parseBotTurnRequest(await readJson(req));

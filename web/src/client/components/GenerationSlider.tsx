@@ -2,12 +2,13 @@ import { useId, useState, type CSSProperties } from 'react';
 import { resolveGeneration } from '../../shared/generations.ts';
 
 /** `value` null means the newest generation, following training as new ones appear. */
-export function GenerationSlider({ label, generations, newest, value, onChange }: {
+export function GenerationSlider({ label, generations, newest, value, onChange, downloadable = [] }: {
   label: string;
   generations: readonly number[];
   newest: number | null;
   value: number | null;
   onChange: (value: number | null) => void;
+  downloadable?: readonly number[];
 }) {
   const id = useId();
   const [typing, setTyping] = useState<string | null>(null);
@@ -82,6 +83,9 @@ export function GenerationSlider({ label, generations, newest, value, onChange }
           <button type="button" className="button is-quiet" onClick={() => onChange(null)}>Newest</button>
         )}
       </div>
+      {value !== null && downloadable.includes(value) && (
+        <p className="notice">Downloads the first time you play it (up to about 25 MB).</p>
+      )}
     </div>
   );
 }

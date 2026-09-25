@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, renameSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Hex } from '../shared/hex.ts';
 import { Game, otherPlayer, SAVED_RADII, type Player } from '../shared/rules.ts';
@@ -171,22 +171,48 @@ function exportNetwork(pt: string, onnx: string): Promise<void> {
 
 const exporting = new Map<string, Promise<void>>();
 
-// Old generations may only have net.pt (the onnx was deleted to save disk), so export on first use.
+// Every tenth older generation is published as a release on GitHub; one is downloaded the first time it's played.
+const NETWORKS_URL = process.env.SIX_NETWORKS_URL ?? 'https://github.com/CixMango/Six/releases/download/networks';
+let published: Promise<number[]> | null = null;
+
+export function downloadableGenerations(): Promise<number[]> {
+  published ??= fetch(`${NETWORKS_URL}/generations.json`, { signal: AbortSignal.timeout(8000) })
+    .then((r) => (r.ok ? r.json() : { generations: [] }))
+    .then((j: { generations?: unknown }) => (Array.isArray(j.generations) ? j.generations.filter((g): g is number => Number.isInteger(g)) : []))
+    .catch(() => {
+      published = null;  // offline: try again next time
+      return [];
+    });
+  return published;
+}
+
+async function downloadNetwork(gen: number, file: string): Promise<void> {
+  const res = await fetch(`${NETWORKS_URL}/gen-${String(gen).padStart(4, '0')}.onnx`, { signal: AbortSignal.timeout(300_000) });
+  if (!res.ok) throw new Error(`generation ${gen} could not be downloaded (${res.status})`);
+  mkdirSync(path.dirname(file), { recursive: true });
+  writeFileSync(file, Buffer.from(await res.arrayBuffer()));
+}
+
+// Old generations may only have net.pt (the onnx was deleted to save disk), so export on first use; published
+// ones that aren't on this PC are downloaded.
 export async function generationNetwork(
   gen: number,
   runsDir = RUNS_RL,
   exportNet: (pt: string, onnx: string) => Promise<void> = exportNetwork,
+  download: (gen: number, file: string) => Promise<void> = downloadNetwork,
+  remote: () => Promise<number[]> = downloadableGenerations,
 ): Promise<string> {
   const dir = path.join(runsDir, `gen-${String(gen).padStart(4, '0')}`);
   const onnx = path.join(dir, 'net.onnx');
   if (existsSync(onnx)) return onnx;
   const pt = path.join(dir, 'net.pt');
-  if (!existsSync(pt)) throw new Error(`generation ${gen} has no saved network`);
+  const fetchable = !existsSync(pt) && (await remote()).includes(gen);
+  if (!existsSync(pt) && !fetchable) throw new Error(`generation ${gen} has no saved network`);
   let job = exporting.get(onnx);
   if (!job) {
-    // Export under a temp name so a failed export can't leave a broken net.onnx.
-    const partial = path.join(dir, 'net.export.onnx');
-    job = exportNet(pt, partial)
+    // Write under a temp name so a failed export or download can't leave a broken net.onnx.
+    const partial = path.join(dir, fetchable ? 'net.download.onnx' : 'net.export.onnx');
+    job = (fetchable ? download(gen, partial) : exportNet(pt, partial))
       .then(() => {
         if (existsSync(partial)) renameSync(partial, onnx);
       })
@@ -194,7 +220,7 @@ export async function generationNetwork(
     exporting.set(onnx, job);
   }
   await job;
-  if (!existsSync(onnx)) throw new Error(`generation ${gen} could not be exported`);
+  if (!existsSync(onnx)) throw new Error(`generation ${gen} could not be ${fetchable ? 'downloaded' : 'exported'}`);
   return onnx;
 }
 

@@ -115,7 +115,7 @@ export function HomeScreen() {
   const [botId, setBotId] = useState<BotId>('rookie');
   const [botLevel, setBotLevel] = useState(3);
   const [botGen, setBotGen] = useState<number | null>(null);
-  const [gens, setGens] = useState<{ generations: number[]; newest: number | null }>({ generations: [], newest: null });
+  const [gens, setGens] = useState<{ generations: number[]; downloadable?: number[]; newest: number | null }>({ generations: [], newest: null });
 
   const [name, setName] = useState(playerName);
   const [roomSide, setRoomSide] = useState<SideChoice>('random');
@@ -239,7 +239,7 @@ export function HomeScreen() {
             >
               {bots.length > 1 && <Segmented label="Opponent" value={botId} options={botOptions} onChange={(id) => { setBotId(id); setBotLevel((l) => fit(id, l)); }} />}
               <Segmented label="Your side" value={botSide} options={SIDE_OPTIONS} onChange={setBotSide} />
-              {botId === 'hexnet' && <GenerationSlider label="Six's generation" generations={gens.generations} newest={gens.newest} value={botGen} onChange={setBotGen} />}
+              {botId === 'hexnet' && <GenerationSlider label="Six's generation" generations={gens.generations} downloadable={gens.downloadable} newest={gens.newest} value={botGen} onChange={setBotGen} />}
               <Segmented label={isTimedBot(botId) ? `${BOT_META[botId].name} thinking time` : 'Rookie strength'} value={botLevel} options={levelOptions(botId)} onChange={setBotLevel} />
               <button type="submit" className="button is-primary">Start match</button>
             </form>
@@ -317,10 +317,10 @@ export function HomeScreen() {
               }}
             >
               {bots.length > 1 && <Segmented label="X" value={watchXBot} options={botOptions} onChange={(id) => { setWatchXBot(id); setWatchX((l) => fit(id, l)); }} />}
-              {watchXBot === 'hexnet' && <GenerationSlider label="X: Six's generation" generations={gens.generations} newest={gens.newest} value={watchXGen} onChange={setWatchXGen} />}
+              {watchXBot === 'hexnet' && <GenerationSlider label="X: Six's generation" generations={gens.generations} downloadable={gens.downloadable} newest={gens.newest} value={watchXGen} onChange={setWatchXGen} />}
               <Segmented label={`X: ${BOT_META[watchXBot].name} ${isTimedBot(watchXBot) ? 'thinking time' : 'strength'}`} value={watchX} options={levelOptions(watchXBot)} onChange={setWatchX} />
               {bots.length > 1 && <Segmented label="O" value={watchOBot} options={botOptions} onChange={(id) => { setWatchOBot(id); setWatchO((l) => fit(id, l)); }} />}
-              {watchOBot === 'hexnet' && <GenerationSlider label="O: Six's generation" generations={gens.generations} newest={gens.newest} value={watchOGen} onChange={setWatchOGen} />}
+              {watchOBot === 'hexnet' && <GenerationSlider label="O: Six's generation" generations={gens.generations} downloadable={gens.downloadable} newest={gens.newest} value={watchOGen} onChange={setWatchOGen} />}
               <Segmented label={`O: ${BOT_META[watchOBot].name} ${isTimedBot(watchOBot) ? 'thinking time' : 'strength'}`} value={watchO} options={levelOptions(watchOBot)} onChange={setWatchO} />
               <p className="notice">SealBot, Strix and the other rival bots join this lineup once the test arena is built.</p>
               <button type="submit" className="button is-primary">Start broadcast</button>

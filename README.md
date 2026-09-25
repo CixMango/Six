@@ -20,7 +20,7 @@ Nothing else to install. The download runs the native engine with the newest net
 
 ## Features
 
-- Play the bot at several strengths, including older generations of the network
+- Play the bot at several strengths, including older generations of the network (every 10th one is [published](https://github.com/CixMango/Six/releases/tag/networks) and downloads in the app when you pick it)
 - Play a friend over a LAN or Hamachi (they just open a link)
 - Watch bots play each other
 - Game review: every turn labelled (best, mistake, blunder, allowed a forced win, ...), Six's better move, the follow-up line, and "retry from here"

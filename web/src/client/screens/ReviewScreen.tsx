@@ -260,6 +260,8 @@ export function ReviewScreen({ data, source, onOpenBoard, onLeave, leaveLabel }:
   const [selected, setSelected] = useState<number | null>(null);
   const [showBetter, setShowBetter] = useState(true);
   const [showFollow, setShowFollow] = useState(false);
+  // Hiding Six's turn is for the turn on screen; the next turn shows it again.
+  useEffect(() => setShowBetter(true), [selected]);
   const [showThreats, toggleThreats] = useThreatHints();
   const rowRefs = useRef<Array<HTMLTableRowElement | null>>([]);
 

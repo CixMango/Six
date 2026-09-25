@@ -115,7 +115,9 @@ export function BoardCanvas({ game, version, interactive, onPlace, marks = [], l
   const framing = useCallback(() => {
     const pad = insetRef.current ?? { top: 0, right: 0, bottom: 0, left: 0 };
     const { w, h } = size.current;
-    const cells = live.current.game.moves.length > 0 ? live.current.game.moves : [{ q: 0, r: 0 }];
+    // Suggestions and follow-ups (review, retry hints) are framed with the stones so they're never off-screen.
+    const shown = live.current.marks.filter((m) => m.kind !== 'threat').map((m) => m.cell);
+    const cells = [...(live.current.game.moves.length > 0 ? live.current.game.moves : [{ q: 0, r: 0 }]), ...shown];
     const usableW = Math.max(200, w - pad.left - pad.right);
     const usableH = Math.max(200, h - pad.top - pad.bottom);
     // Phones keep stones large and rely on panning.
@@ -198,7 +200,20 @@ export function BoardCanvas({ game, version, interactive, onPlace, marks = [], l
     request();
   }, [game, version, framing, moveCamera, request]);
 
-  useEffect(() => request(), [marks, interactive, reducedMotion, request]);
+  useEffect(() => {
+    const { w, h } = size.current;
+    if (w > 0) {
+      const pad = insetRef.current ?? { top: 0, right: 0, bottom: 0, left: 0 };
+      const edge = Math.min(w, h) * 0.04;
+      const offScreen = marks.some((m) => {
+        if (m.kind === 'threat') return false;
+        const p = worldToScreen(camera.current, w, h, hexToPixel(m.cell, 1));
+        return p.x < pad.left + edge || p.y < pad.top + edge || p.x > w - pad.right - edge || p.y > h - pad.bottom - edge;
+      });
+      if (offScreen) moveCamera(framing(), true);
+    }
+    request();
+  }, [marks, interactive, reducedMotion, request, framing, moveCamera]);
 
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const gesture = useRef<{ startX: number; startY: number; dragged: boolean; pinch: number | null }>({ startX: 0, startY: 0, dragged: false, pinch: null });
