@@ -18,6 +18,10 @@ From [Releases](https://github.com/CixMango/Six/releases):
 
 Nothing else to install. The download runs the native engine with the newest network, so at the same thinking time it searches far more than the browser version, and you can give it up to 45 s a turn.
 
+## Strategy guide
+
+[**Shapes that win**](guide/shapes.md): every small shape of one player's stones, checked by the forced-win solver. Which shapes must be answered (the triangle, the chevron and more), which replies hold, and 21 four-stone shapes that can't be stopped at all.
+
 ## Features
 
 - Play the bot at several strengths, including older generations of the network (every 10th one is [published](https://github.com/CixMango/Six/releases/tag/networks) and downloads in the app when you pick it)

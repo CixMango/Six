@@ -49,6 +49,8 @@ target_compile_definitions(sixtests PRIVATE SIX_FIXTURES="${CMAKE_CURRENT_SOURCE
 
 add_executable(sixbench tools/bench.cpp)
 target_link_libraries(sixbench PRIVATE sixcore)
+add_executable(sixshapes tools/shapes.cpp)
+target_link_libraries(sixshapes PRIVATE sixcore)
 add_executable(sixnnue tools/nnue_eval.cpp)
 target_link_libraries(sixnnue PRIVATE sixcore)
 
