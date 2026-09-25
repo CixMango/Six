@@ -1,13 +1,16 @@
 #include "evaluator.hpp"
 
 #include <cmath>
+#include <iostream>
 #include <iterator>
 #include <stdexcept>
 #include <vector>
 
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#endif
 
 #include <onnxruntime_cxx_api.h>
 #ifdef SIX_DML
@@ -17,13 +20,18 @@
 namespace six {
 namespace {
 
-std::wstring widen(const std::string& utf8) {
+#ifdef _WIN32
+// ONNX Runtime takes wide paths on Windows.
+std::basic_string<ORTCHAR_T> modelPath(const std::string& utf8) {
   const int size = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
   std::wstring wide(static_cast<std::size_t>(size), L'\0');
   MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, wide.data(), size);
   wide.resize(static_cast<std::size_t>(size - 1));
   return wide;
 }
+#else
+std::string modelPath(const std::string& utf8) { return utf8; }
+#endif
 
 }  // namespace
 
@@ -54,9 +62,14 @@ Evaluator::Evaluator(const std::string& onnxPath, Device device) : impl_(std::ma
   }
   if (device == Device::Cuda || device == Device::TensorRt) {
     OrtCUDAProviderOptionsV2* cuda = nullptr;
-    Ort::ThrowOnError(Ort::GetApi().CreateCUDAProviderOptions(&cuda));
-    options.AppendExecutionProvider_CUDA_V2(*cuda);
-    Ort::GetApi().ReleaseCUDAProviderOptions(cuda);
+    try {
+      Ort::ThrowOnError(Ort::GetApi().CreateCUDAProviderOptions(&cuda));
+      options.AppendExecutionProvider_CUDA_V2(*cuda);
+    } catch (const Ort::Exception& e) {
+      // No usable CUDA (say, a Linux PC without the CUDA libraries): run on every CPU core instead of failing.
+      std::cerr << "CUDA is not available, using the CPU: " << e.what() << '\n';
+    }
+    if (cuda) Ort::GetApi().ReleaseCUDAProviderOptions(cuda);
   } else if (device == Device::DirectMl) {
 #ifdef SIX_DML
     // DirectML can't use memory patterns or parallel execution; batches all come from one thread anyway.
@@ -69,7 +82,7 @@ Evaluator::Evaluator(const std::string& onnxPath, Device device) : impl_(std::ma
   } else {
     options.SetIntraOpNumThreads(1);
   }
-  impl_->session = Ort::Session(impl_->env, widen(onnxPath).c_str(), options);
+  impl_->session = Ort::Session(impl_->env, modelPath(onnxPath).c_str(), options);
   // The first runs set up CUDA and pick kernels, which takes far longer than a search can wait: do them now.
   std::vector<float> planes(static_cast<std::size_t>(kPlaneCount) * kCropCells, 0.0f);
   std::vector<NetOutput> out(1);

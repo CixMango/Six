@@ -36,7 +36,7 @@ export function ChannelBug({ tag, live = false, detail }: { tag: string; live?: 
         {live && <span className="bug-dot" aria-hidden="true" />}
         {tag}
       </span>
-      {detail && <span className="bug-detail">{detail}</span>}
+      {detail && <span className="bug-detail" title={typeof detail === 'string' ? detail : undefined}>{detail}</span>}
     </div>
   );
 }

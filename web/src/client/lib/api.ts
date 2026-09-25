@@ -115,6 +115,8 @@ export const api = {
       signal,
     }).then((r) => r.proven),
   replays: () => request<ReplaySummary[]>('/api/replays'),
+  importGame: (text: string) =>
+    request<{ id: string }>('/api/import/game', { method: 'POST', body: JSON.stringify({ text }) }).then((r) => r.id),
   importHexo: (link: string) =>
     request<{ id: string }>('/api/import/hexo', { method: 'POST', body: JSON.stringify({ link }) }).then((r) => r.id),
   replay: (id: string) => request<ReplayRecord>(`/api/replays/${encodeURIComponent(id)}`),

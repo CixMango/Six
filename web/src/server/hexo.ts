@@ -1,5 +1,6 @@
 import { fromHexo, HEXO_ORIGIN, HEXO_RADIUS, hexoApiPath, parseHexoLink } from '../shared/hexoImport.ts';
-import { buildReplay } from '../shared/replay.ts';
+import { parseGameText } from '../shared/gameImport.ts';
+import { buildReplay, newReplayId } from '../shared/replay.ts';
 import { Game } from '../shared/rules.ts';
 import type { ReplayStore } from './replayStore.ts';
 
@@ -30,4 +31,25 @@ export async function importHexo(text: string, replays: ReplayStore): Promise<st
   });
   await replays.save(record);
   return id;
+}
+
+// A HeXO link, HTTTX text or a replay file's contents, saved as a replay.
+export async function importGame(text: string, replays: ReplayStore): Promise<string> {
+  const parsed = parseGameText(text);
+  if (parsed.kind === 'hexo') return importHexo(text, replays);
+  if (parsed.kind === 'replay') {
+    const record = parsed.record;
+    if (await replays.get(record.id)) return record.id;
+    await replays.save(record);
+    return record.id;
+  }
+  const record = buildReplay({
+    game: Game.fromMoves(parsed.moves, HEXO_RADIUS),
+    mode: 'imported',
+    players: { X: { name: 'Player 1', kind: 'human' }, O: { name: 'Player 2', kind: 'human' } },
+    resignedBy: null,
+    id: newReplayId(),
+  });
+  await replays.save(record);
+  return record.id;
 }

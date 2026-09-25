@@ -5,7 +5,7 @@ import { Game } from '../../shared/rules.ts';
 import { ROOM_BOTS, ROOM_CODE_PATTERN, type SideChoice } from '../../shared/protocol.ts';
 import { BoardCanvas, type BoardHandle } from '../board/BoardCanvas.tsx';
 import { ChannelBug, Scorebug, Segmented } from '../components/Broadcast.tsx';
-import { HexoImport } from '../components/HexoImport.tsx';
+import { GameImport } from '../components/GameImport.tsx';
 import { SettingsButton } from '../components/Settings.tsx';
 import { GenerationSlider } from '../components/GenerationSlider.tsx';
 import { api, type ServerInfo, type TrainingView } from '../lib/api.ts';
@@ -216,9 +216,9 @@ export function HomeScreen() {
         </header>
 
         <ol className="rundown-list">
-          <RundownRow id="hexo" tag="Import" title="Review a HeXO game" summary="Paste a sandbox or game link" open={open === 'hexo'} onToggle={toggle}>
+          <RundownRow id="hexo" tag="Import" title="Import a game" summary="HeXO link, HTTTX or a replay file" open={open === 'hexo'} onToggle={toggle}>
             <div className="rundown-form">
-              <HexoImport label="HeXO link" onImport={async (link) => navigate(`/review/${await api.importHexo(link)}`)} />
+              <GameImport label="Game to import" onImport={async (text) => navigate(`/review/${await api.importGame(text)}`)} />
             </div>
           </RundownRow>
           <RundownRow

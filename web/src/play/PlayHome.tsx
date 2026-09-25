@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { HexoImport } from '../client/components/HexoImport.tsx';
+import { GameImport } from '../client/components/GameImport.tsx';
+import { parseGameText } from '../shared/gameImport.ts';
 import { reviewInBrowser } from '../client/screens/ReviewScreen.tsx';
 import { fromHexo, parseHexoLink, type ImportedGame } from '../shared/hexoImport.ts';
 import { useLocation } from 'wouter';
@@ -193,9 +194,17 @@ export function PlayHome() {
           )}
           <button type="submit" className="button is-primary">{mode === 'watch' ? 'Start bot match' : 'Start match'}</button>
         </form>
-        <HexoImport onImport={async (text) => {
-          const imported = await fetchHexo(text);
-          reviewInBrowser(imported.moves, RADIUS, imported.names, imported.swapColors);
+        <GameImport onImport={async (text) => {
+          const parsed = parseGameText(text);
+          if (parsed.kind === 'hexo') {
+            const imported = await fetchHexo(text);
+            reviewInBrowser(imported.moves, RADIUS, imported.names, imported.swapColors);
+          } else if (parsed.kind === 'htttx') {
+            reviewInBrowser(parsed.moves, RADIUS, { X: 'Player 1', O: 'Player 2' });
+          } else {
+            const r = parsed.record;
+            reviewInBrowser(r.moves.map(([q, rr]) => ({ q, r: rr })), r.radius, { X: r.players.X.name, O: r.players.O.name }, r.swapColors);
+          }
           navigate('/review');
         }} />
         <p className="legal-note">

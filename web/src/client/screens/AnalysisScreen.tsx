@@ -13,6 +13,8 @@ import { lastMoveInfo } from '../lib/gameView.ts';
 import { useNarrow } from '../lib/useNarrow.ts';
 import { useWinChance } from '../lib/useWinChance.ts';
 import { swappedTeamColors } from '../lib/teamColors.ts';
+import { ExportMenu } from '../components/ExportMenu.tsx';
+import { buildReplay, newReplayId } from '../../shared/replay.ts';
 
 export function AnalysisScreen() {
   const [, navigate] = useLocation();
@@ -226,6 +228,20 @@ export function AnalysisScreen() {
           </div>
         </div>
         <p className="timeline-label caps">{turnLabel}</p>
+        <ExportMenu
+          up
+          moves={line}
+          record={async () => (record && !inVariation
+            ? record
+            : buildReplay({
+              game: Game.fromMoves(line, radius),
+              mode: 'analysis',
+              players: { X: { name: names.X, kind: 'human' }, O: { name: names.O, kind: 'human' } },
+              resignedBy: null,
+              id: newReplayId(),
+              swapColors: record?.swapColors,
+            }))}
+        />
         {inVariation && (
           <button
             type="button"

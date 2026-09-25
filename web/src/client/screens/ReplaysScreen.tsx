@@ -3,7 +3,7 @@ import { Link, useLocation } from 'wouter';
 import type { ReplaySummary } from '../../shared/replay.ts';
 import { ChannelBug } from '../components/Broadcast.tsx';
 import { api } from '../lib/api.ts';
-import { HexoImport } from '../components/HexoImport.tsx';
+import { GameImport } from '../components/GameImport.tsx';
 import { swappedTeamColors } from '../lib/teamColors.ts';
 
 const MODE_LABEL: Record<ReplaySummary['mode'], string> = {
@@ -12,6 +12,7 @@ const MODE_LABEL: Record<ReplaySummary['mode'], string> = {
   botmatch: 'Bot match',
   analysis: 'Study',
   hexo: 'HeXO',
+  imported: 'Imported',
 };
 
 const REASON_LABEL: Record<ReplaySummary['reason'], string> = {
@@ -39,7 +40,7 @@ export function ReplaysScreen() {
         <header className="library-header">
           <h1 className="library-title caps">Replays</h1>
           <p className="notice">Every finished game on this PC. Open one for the coach's review of every turn.</p>
-          <HexoImport onImport={async (link) => navigate(`/review/${await api.importHexo(link)}`)} />
+          <GameImport onImport={async (text) => navigate(`/review/${await api.importGame(text)}`)} />
         </header>
 
         {error && <p className="error-text">Replays could not load: {error}</p>}

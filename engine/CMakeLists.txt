@@ -11,7 +11,12 @@ if(MSVC)
   if(SIX_ASAN)
     add_compile_options(/fsanitize=address)
   endif()
+else()
+  add_compile_options(-Wall -Wextra)
+  # Find the ONNX Runtime libraries copied next to the executables.
+  set(CMAKE_BUILD_RPATH "$ORIGIN")
 endif()
+find_package(Threads REQUIRED)
 
 add_library(sixcore STATIC
   src/board.cpp
@@ -22,6 +27,7 @@ add_library(sixcore STATIC
   src/nnue.cpp
 )
 target_include_directories(sixcore PUBLIC src)
+target_link_libraries(sixcore PUBLIC Threads::Threads)
 
 add_executable(sixtests
   tests/test_main.cpp
@@ -56,17 +62,27 @@ if(SIX_DML)
   set(SIX_ORT_LIB "${SIX_ORT_DIR}/runtimes/win-x64/native")
   set(SIX_ORT_DLLS "${SIX_ORT_LIB}/onnxruntime.dll" "${SIX_ORT_LIB}/onnxruntime_providers_shared.dll"
       "${SIX_DIRECTML_DIR}/bin/x64-win/DirectML.dll")
-else()
+elseif(WIN32)
   set(SIX_ORT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/onnxruntime-win-x64-gpu_cuda13-1.30.0" CACHE PATH "ONNX Runtime SDK")
   set(SIX_ORT_INCLUDE "${SIX_ORT_DIR}/include")
   set(SIX_ORT_LIB "${SIX_ORT_DIR}/lib")
   set(SIX_ORT_DLLS "${SIX_ORT_LIB}/onnxruntime.dll" "${SIX_ORT_LIB}/onnxruntime_providers_shared.dll"
       "${SIX_ORT_LIB}/onnxruntime_providers_cuda.dll" "${SIX_ORT_LIB}/onnxruntime_providers_tensorrt.dll")
+else()
+  # Linux: the GPU (CUDA 12) build; without CUDA installed the engine falls back to the CPU.
+  set(SIX_ORT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/onnxruntime-linux-x64-gpu-1.24.4" CACHE PATH "ONNX Runtime SDK")
+  set(SIX_ORT_INCLUDE "${SIX_ORT_DIR}/include")
+  set(SIX_ORT_LIB "${SIX_ORT_DIR}/lib")
+  file(GLOB SIX_ORT_DLLS "${SIX_ORT_LIB}/libonnxruntime*.so*")
 endif()
 if(EXISTS "${SIX_ORT_INCLUDE}/onnxruntime_cxx_api.h")
   add_library(sixnet STATIC src/evaluator.cpp src/batching.cpp src/mcts.cpp)
   target_include_directories(sixnet PUBLIC src "${SIX_ORT_INCLUDE}")
-  target_link_libraries(sixnet PUBLIC sixcore "${SIX_ORT_LIB}/onnxruntime.lib")
+  if(WIN32)
+    target_link_libraries(sixnet PUBLIC sixcore "${SIX_ORT_LIB}/onnxruntime.lib")
+  else()
+    target_link_libraries(sixnet PUBLIC sixcore "${SIX_ORT_LIB}/libonnxruntime.so")
+  endif()
   target_compile_definitions(sixnet PUBLIC SIX_WITH_NET=1)
   if(SIX_DML)
     target_compile_definitions(sixnet PUBLIC SIX_DML=1)

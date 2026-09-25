@@ -1,6 +1,6 @@
 import { Game, otherPlayer, SAVED_RADII, turnForStone, type Player } from './rules.ts';
 
-export type MatchMode = 'online' | 'bot' | 'botmatch' | 'analysis' | 'hexo';
+export type MatchMode = 'online' | 'bot' | 'botmatch' | 'analysis' | 'hexo' | 'imported';
 export type ResultReason = 'six' | 'resign' | 'abandoned' | 'unfinished';
 
 export interface SeatInfo {
@@ -44,7 +44,7 @@ export interface ReplaySummary {
 }
 
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
-const MODES: readonly MatchMode[] = ['online', 'bot', 'botmatch', 'analysis', 'hexo'];
+const MODES: readonly MatchMode[] = ['online', 'bot', 'botmatch', 'analysis', 'hexo', 'imported'];
 
 export function newReplayId(now = new Date()): string {
   const stamp = now.toISOString().replace(/[-:T]/g, '').slice(0, 14);

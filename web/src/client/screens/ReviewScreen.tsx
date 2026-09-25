@@ -11,6 +11,8 @@ import { BoardCanvas, type BoardHandle } from '../board/BoardCanvas.tsx';
 import type { BoardMark } from '../board/renderer.ts';
 import { ChannelBug, Dock, LowerThird, Scorebug } from '../components/Broadcast.tsx';
 import { SettingsButton } from '../components/Settings.tsx';
+import { ExportMenu } from '../components/ExportMenu.tsx';
+import { buildReplay, newReplayId } from '../../shared/replay.ts';
 import { api } from '../lib/api.ts';
 import { lastMoveInfo } from '../lib/gameView.ts';
 import { useNarrow } from '../lib/useNarrow.ts';
@@ -410,7 +412,7 @@ export function ReviewScreen({ data, source, onOpenBoard, onLeave, leaveLabel }:
         label="Game review board"
         inset={sheet ? { top: 150, right: 16, bottom: Math.round(window.innerHeight * 0.54), left: 16 } : { top: 110, right: 440, bottom: 170, left: 24 }}
       />
-      <ChannelBug tag="Review" detail={`${names.X} vs ${names.O}`} />
+      <ChannelBug tag="Review" />
       <SettingsButton />
       <Scorebug swapColors={data.swapColors} names={names} lastMove={lastMoveInfo(game)} onShowLastStone={() => board.current?.showLastStone()} current={game.current} stonesLeft={game.stonesLeft} turn={game.turn} winner={game.winner} finished={game.winner !== null} chance={chance} />
 
@@ -421,6 +423,19 @@ export function ReviewScreen({ data, source, onOpenBoard, onLeave, leaveLabel }:
           <div className="coach-title-row">
             <h1 className="coach-heading">Coach</h1>
             <div className="coach-exits">
+              <ExportMenu
+                moves={moves}
+                record={async () => (data.replayId && source === 'server'
+                  ? api.replay(data.replayId)
+                  : buildReplay({
+                    game: Game.fromMoves(moves, radius),
+                    mode: 'imported',
+                    players: { X: { name: names.X, kind: 'human' }, O: { name: names.O, kind: 'human' } },
+                    resignedBy: null,
+                    id: newReplayId(),
+                    swapColors: data.swapColors,
+                  }))}
+              />
               {onOpenBoard && <button type="button" className="button is-quiet" onClick={() => onOpenBoard(shownStones)}>Analysis board</button>}
               <button type="button" className="button is-quiet" onClick={onLeave}>{leaveLabel}</button>
             </div>
@@ -428,7 +443,7 @@ export function ReviewScreen({ data, source, onOpenBoard, onLeave, leaveLabel }:
           {progress && (
             <div className="coach-progress" role="status">
               <span className="caps">{progress}</span>
-              <span className="coach-progress-bar"><span style={{ width: `${(state.judged / state.total) * 100}%` }} /></span>
+              <span className="coach-progress-bar"><span style={{ transform: `scaleX(${state.judged / state.total})` }} /></span>
             </div>
           )}
         </header>

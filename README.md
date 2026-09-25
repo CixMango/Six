@@ -8,11 +8,14 @@ Play it in the browser at **https://playsix.cixmango.workers.dev**, or download 
 
 ![Game review](.github/screenshot.png)
 
-## Download (Windows)
+## Download
 
-Grab `Six-<version>-windows-x64.zip` from [Releases](https://github.com/CixMango/Six/releases), unzip it anywhere and double-click `Start Six.cmd`. Nothing else to install.
+From [Releases](https://github.com/CixMango/Six/releases):
 
-It runs the native engine with the newest network on any DirectX 12 GPU (NVIDIA, AMD or Intel), so at the same thinking time it searches far more than the browser version, and you can give it up to 45 s a turn.
+- **Windows:** `Six-<version>-windows-x64.zip`. Unzip it anywhere and double-click `Start Six.cmd`. Runs the bot on any DirectX 12 GPU (NVIDIA, AMD or Intel).
+- **Linux:** `Six-<version>-linux-x64.tar.gz`. Extract it and run `./start-six.sh`. Uses an NVIDIA GPU when CUDA 12 and cuDNN 9 are installed, the CPU otherwise.
+
+Nothing else to install. The download runs the native engine with the newest network, so at the same thinking time it searches far more than the browser version, and you can give it up to 45 s a turn.
 
 ## Features
 
@@ -20,7 +23,7 @@ It runs the native engine with the newest network on any DirectX 12 GPU (NVIDIA,
 - Play a friend over a LAN or Hamachi (they just open a link)
 - Watch bots play each other
 - Game review: every turn labelled (best, mistake, blunder, allowed a forced win, ...), Six's better move, the follow-up line, and "retry from here"
-- Import games and sandbox positions from HeXO by link
+- Import games from HeXO links, HTTTX notation or replay files; export any game as HTTTX or a replay file
 - Analysis board and saved replays
 - Training dashboard for the self-play loop
 

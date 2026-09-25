@@ -8,7 +8,7 @@ import { validateReplay } from '../shared/replay.ts';
 import { availableBots, botTurn, evaluatePosition, generationOf, REVIEW_MS, reviewPosition, listGenerations, newestNetwork, parseBotTurnRequest, precheckTurn, provenWinner } from './bots.ts';
 import { localAddresses } from './network.ts';
 import { ReplayStore } from './replayStore.ts';
-import { importHexo } from './hexo.ts';
+import { importGame, importHexo } from './hexo.ts';
 import { RoomManager } from './rooms.ts';
 import { TrainingStatus, isLocalAddress } from './training.ts';
 
@@ -139,6 +139,11 @@ async function api(req: IncomingMessage, res: ServerResponse, url: URL): Promise
       return sendJson(res, 200, await training.view());
     }
     if (route === 'GET /api/replays') return sendJson(res, 200, await replays.list());
+    if (route === 'POST /api/import/game') {
+      const body = (await readJson(req)) as { text?: unknown };
+      if (typeof body.text !== 'string') throw new Error('text must be a string');
+      return sendJson(res, 200, { id: await importGame(body.text, replays) });
+    }
     if (route === 'POST /api/import/hexo') {
       const body = (await readJson(req)) as { link?: unknown };
       if (typeof body.link !== 'string') throw new Error('link must be a HeXO link');

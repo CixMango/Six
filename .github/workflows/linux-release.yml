@@ -1,0 +1,67 @@
+name: Linux release
+
+# Builds the Linux download and attaches it to an existing release. The network comes from that release's
+# Windows zip, so both downloads play the same generation.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without the v, e.g. 1.1.0
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Build tools
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: ONNX Runtime (CUDA 12 build)
+        run: |
+          curl -sSL -o ort.tgz https://github.com/microsoft/onnxruntime/releases/download/v1.24.4/onnxruntime-linux-x64-gpu-1.24.4.tgz
+          mkdir -p engine/third_party
+          tar -xzf ort.tgz -C engine/third_party
+
+      - name: Engine
+        working-directory: engine
+        run: |
+          cmake --preset linux
+          cmake --build --preset linux
+          ./build/linux/sixtests
+
+      - name: Network from the Windows download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "v${{ inputs.version }}" --pattern '*windows-x64.zip' --dir net
+          unzip -q net/*.zip -d net
+
+      - name: Package
+        working-directory: web
+        run: |
+          npm ci
+          node scripts/package-release.mjs --net "$(ls -d ../net/Six/runs/rl/gen-*)/net.onnx" --version "${{ inputs.version }}"
+
+      - name: Smoke test
+        run: |
+          tar -xzf web/release/Six-*-linux-x64.tar.gz -C /tmp
+          cd /tmp/Six
+          SIX_PORT=6690 SIX_ENGINE="$PWD/engine/sixengine" ./node/node web/src/server/main.mjs --prod &
+          sleep 5
+          curl -sf http://localhost:6690/api/bots | grep -q '"hexnet"'
+          curl -sf -X POST http://localhost:6690/api/bot/turn -H 'content-type: application/json' \
+            -d '{"moves":[[0,0],[1,0],[2,-1]],"radius":8,"bot":"hexnet","level":1}' | grep -q cells
+
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "v${{ inputs.version }}" web/release/Six-*-linux-x64.tar.gz --clobber

@@ -16,6 +16,12 @@
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
     },
     {
+      "name": "linux",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "CMAKE_CXX_COMPILER": "g++" }
+    },
+    {
       "name": "dml",
       "inherits": "base",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "SIX_DML": "ON" }
@@ -34,6 +40,7 @@
   "buildPresets": [
     { "name": "release", "configurePreset": "release" },
     { "name": "dml", "configurePreset": "dml" },
+    { "name": "linux", "configurePreset": "linux" },
     { "name": "debug", "configurePreset": "debug" },
     { "name": "asan", "configurePreset": "asan" }
   ],

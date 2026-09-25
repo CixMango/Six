@@ -172,23 +172,23 @@
   letter-spacing: 0.2em;
 }
 
-.hexo-import {
+.game-import {
   max-width: 44rem;
   margin-top: var(--space-3);
 }
 
-.hexo-import .join-row .text-input {
+.game-import .join-row .text-input {
   min-width: 0;
   letter-spacing: normal;
 }
 
-.rundown-form > .hexo-import:first-child {
+.rundown-form > .game-import:first-child {
   margin-top: 0;
   padding-top: 0;
   border-top: 0;
 }
 
-.hexo-import .error-text {
+.game-import .error-text {
   margin-top: var(--space-2);
 }
 
@@ -274,7 +274,8 @@
   gap: var(--space-3);
   width: min(760px, calc(100vw - 2 * var(--edge)));
   padding: var(--space-2) var(--space-3);
-  animation: wipe-up var(--dur-slow) var(--ease-out) both;
+  /* backwards, not both: a clip left on after the wipe would cut off the Export menu. */
+  animation: wipe-up var(--dur-slow) var(--ease-out) backwards;
 }
 
 .timeline-buttons {
@@ -593,9 +594,19 @@
   }
 
   .replay-table .col-mode,
-  .replay-table .col-rules,
   .replay-table .col-turns {
     display: none;
+  }
+
+  .replay-table th,
+  .replay-table td {
+    padding-inline: var(--space-2);
+  }
+
+  /* Names wrap on a phone so X, O and the result all fit without scrolling sideways. */
+  .replay-table td:not(:first-child) {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .replay-table td:last-child {
@@ -1219,9 +1230,10 @@
 
 .coach-title-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-3);
 }
 
 .coach-heading {
@@ -1235,7 +1247,13 @@
 
 .coach-exits {
   display: flex;
-  gap: var(--space-1);
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.coach-exits .button,
+.coach-exits .export-menu > summary {
+  padding-inline: var(--space-2);
 }
 
 .coach-progress {
@@ -1257,7 +1275,8 @@
   display: block;
   height: 100%;
   background: var(--text);
-  transition: width var(--dur) var(--ease-out);
+  transform-origin: left;
+  transition: transform var(--dur) var(--ease-out);
 }
 
 .coach-summary {
@@ -1736,4 +1755,68 @@
   color: var(--text-2);
   font-size: var(--step--2);
   font-variant-numeric: tabular-nums;
+}
+
+.game-import-file {
+  margin-top: var(--space-1);
+  /* Quiet button text lines up with the field above it. */
+  margin-left: calc(var(--space-4) * -1);
+}
+
+.game-import .notice,
+.game-import .error-text {
+  margin: var(--space-1) 0 0;
+  font-size: var(--step--1);
+}
+
+/* Export: a small menu that opens under (or, in the analysis timeline, above) its button. */
+.export-menu {
+  position: relative;
+}
+
+.export-menu > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  list-style: none;
+}
+
+.export-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.export-menu-list {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  display: grid;
+  min-width: 14rem;
+  padding: var(--space-1);
+}
+
+.export-menu[data-up='true'] .export-menu-list {
+  top: auto;
+  bottom: calc(100% + var(--space-1));
+  left: auto;
+  right: 0;
+}
+
+.export-menu-list .button {
+  justify-content: flex-start;
+  white-space: nowrap;
+}
+
+.game-import .join-row {
+  align-items: flex-start;
+}
+
+.game-import-text {
+  min-height: 4.5rem;
+  font-family: inherit;
+  padding-block: var(--space-2);
+  resize: vertical;
+  font-size: var(--step--1);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.45;
 }
