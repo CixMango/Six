@@ -6,7 +6,8 @@
 //   defenses   if the opponent moves first, which two-stone replies near the shape stop that (up to --defend stones)?
 // A shape with a forced win whatever the opponent replies is unstoppable.
 //
-// Usage: sixshapes [--stones 4] [--defend 4] [--region 3] [--turns 12] [--nodes 2000000] [--threads 8] > shapes.jsonl
+// Usage: sixshapes [--stones 4] [--defend 4] [--region 3] [--turns 12] [--nodes 2000000] [--threads 8]
+//                  [--first-hold 1] [--only shapes.txt] > shapes.jsonl
 #include <algorithm>
 #include <atomic>
 #include <cstdlib>
@@ -20,6 +21,7 @@
 #include <vector>
 
 #include "board.hpp"
+#include "tactics.hpp"
 #include "threats.hpp"
 
 namespace {
@@ -114,7 +116,8 @@ std::vector<Shape> enumerate(int maxStones) {
 Hex filler(int k) { return {25 + 7 * (k % 4), -25 + 7 * (k / 4)}; }
 
 // The shape centred near the origin, with the owner (X) or the opponent (O) to move with two stones.
-void setUp(Board& board, const Shape& shape, Player toMove) {
+// `theirs` are opponent stones placed near the shape (in reach, like the shape) before any fillers.
+void setUp(Board& board, const Shape& shape, Player toMove, const Shape& theirs = {}) {
   const int n = static_cast<int>(shape.size());
   // A turn starts with X to move after 3 + 4k stones and O after 1 + 4k; X then has 1 + 2k of them.
   int total = toMove == Player::X ? 3 : 1;
@@ -133,18 +136,31 @@ void setUp(Board& board, const Shape& shape, Player toMove) {
       }
     }
   }
+  auto theirTurns = [](int stones) {
+    int o = 0;
+    for (int i = 0; i < stones; ++i) o += six::playerForStone(i) == Player::O;
+    return o;
+  };
+  while (theirTurns(total) < static_cast<int>(theirs.size())) total += 4;
   int nextShape = 0;
   int nextFiller = 0;
+  std::size_t nextTheirs = 0;
   for (int i = 0; i < total; ++i) {
     const bool shapeStone = six::playerForStone(i) == Player::X && nextShape < n;
-    const Hex h = shapeStone ? order[static_cast<std::size_t>(nextShape++)] : filler(nextFiller++);
-    board.setSearchMode(!shapeStone);
+    const bool theirStone = six::playerForStone(i) == Player::O && nextTheirs < theirs.size();
+    const Hex h = shapeStone ? order[static_cast<std::size_t>(nextShape++)]
+                  : theirStone ? theirs[nextTheirs++] : filler(nextFiller++);
+    board.setSearchMode(!shapeStone && !theirStone);
     if (board.place(h) != six::PlaceError::None) {
       std::cerr << "could not set up the shape\n";
       std::exit(1);
     }
   }
   board.setSearchMode(false);
+  if (nextTheirs < theirs.size()) {
+    std::cerr << "not enough opponent turns for the extra stones\n";
+    std::exit(1);
+  }
 }
 
 struct Result {
@@ -181,7 +197,7 @@ std::string hexList(const std::vector<Hex>& cells) {
 }  // namespace
 
 int main(int argc, char** argv) {
-  int maxStones = 4, defend = 4, region = 3, turns = 12;
+  int maxStones = 4, defend = 4, region = 3, turns = 12, firstHold = 0;
   std::int64_t nodes = 2'000'000;
   int threads = std::max(1u, std::thread::hardware_concurrency() / 2);
   for (int i = 1; i + 1 < argc; i += 2) {
@@ -193,7 +209,106 @@ int main(int argc, char** argv) {
     else if (k == "--turns") turns = static_cast<int>(v);
     else if (k == "--nodes") nodes = v;
     else if (k == "--threads") threads = static_cast<int>(v);
+    else if (k == "--first-hold") firstHold = static_cast<int>(v);
     else if (k == "--only") continue;
+  }
+  // --line q r q r ...: play out the owner's forced win for one shape. The defender blocks with the covering pair
+  // that makes the rest of the win longest, so the line shows the toughest defence.
+  // --refute a b c d q r q r ...: the same, after the opponent first replies at (a,b) and (c,d).
+  if (argc > 1 && (std::string(argv[1]) == "--line" || std::string(argv[1]) == "--refute")) {
+    const bool refute = std::string(argv[1]) == "--refute";
+    std::vector<Hex> cells;
+    for (int i = 2; i + 1 < argc; i += 2) cells.push_back({std::atoi(argv[i]), std::atoi(argv[i + 1])});
+    const std::vector<Hex> reply = refute ? std::vector<Hex>(cells.begin(), cells.begin() + 2) : std::vector<Hex>{};
+    const Shape shape(cells.begin() + (refute ? 2 : 0), cells.end());
+    six::ThreatSolver solver(64);
+    Board board(8);
+    setUp(board, shape, refute ? Player::O : Player::X);
+    std::ostringstream out;
+    out << "{\"shape\":" << hexList(shape) << ",\"turns\":[";
+    bool firstTurn = true;
+    auto record = [&](char who, const std::vector<Hex>& stones) {
+      out << (firstTurn ? "" : ",") << "{\"player\":\"" << who << "\",\"stones\":" << hexList(stones) << "}";
+      firstTurn = false;
+    };
+    for (Hex h : reply) board.place(h);
+    if (refute) record('O', reply);
+    auto longest = [&](Board& b) {
+      solver.clear();
+      const six::ThreatWin w = solver.solve(b, turns, nodes);
+      return w.found ? w.turns : 100;
+    };
+    std::vector<Hex> six;
+    for (int step = 0; step < 30 && six.empty(); ++step) {
+      if (board.current() == Player::X) {
+        const auto finish = six::threatWindows(board, Player::X);
+        if (!finish.empty()) {
+          std::vector<Hex> cells;
+          for (int i = 0; i < 6; ++i) {
+            const Hex c = finish.front().cell(i);
+            six.push_back(c);
+            if (board.at(c) == Player::None) cells.push_back(c);
+          }
+          record('X', cells);
+          break;
+        }
+        solver.clear();
+        const six::ThreatWin w = solver.solve(board, turns, nodes);
+        if (!w.found) {
+          std::cerr << "no forced win from here\n";
+          return 1;
+        }
+        board.place(w.a);
+        board.place(w.b);
+        record('X', {w.a, w.b});
+      } else {
+        std::vector<std::pair<Hex, Hex>> pairs;
+        six::coveringPairs(board, Player::X, pairs);
+        std::vector<Hex> reply;
+        int best = -1;
+        for (const auto& [a, b] : pairs) {
+          board.place(a);
+          board.place(b);
+          const int score = board.threatCount(Player::O) == 0 ? longest(board) : -1;
+          board.undo();
+          board.undo();
+          if (score > best) {
+            best = score;
+            reply = {a, b};
+          }
+        }
+        if (reply.empty()) {  // more fours than two stones can block: block as many as it can
+          const auto fours = six::threatWindows(board, Player::X);
+          std::vector<Hex> cells;
+          for (const auto& w : fours) {
+            for (int i = 0; i < 6; ++i) {
+              const Hex c = w.cell(i);
+              if (board.at(c) == Player::None && std::find(cells.begin(), cells.end(), c) == cells.end()) cells.push_back(c);
+            }
+          }
+          int bestBlocked = -1;
+          for (std::size_t i = 0; i < cells.size(); ++i) {
+            for (std::size_t j = i + 1; j < cells.size(); ++j) {
+              int blocked = 0;
+              for (const auto& w : fours) {
+                bool hit = false;
+                for (int k = 0; k < 6; ++k) hit = hit || w.cell(k) == cells[i] || w.cell(k) == cells[j];
+                blocked += hit;
+              }
+              if (blocked > bestBlocked) {
+                bestBlocked = blocked;
+                reply = {cells[i], cells[j]};
+              }
+            }
+          }
+        }
+        for (Hex h : reply) board.place(h);
+        record('O', reply);
+      }
+    }
+    out << "],\"six\":" << hexList(six) << "}";
+    std::cout << out.str() << "\n";
+    return 0;
   }
   if (argc > 1 && std::string(argv[1]) == "--probe") {
     six::ThreatSolver solver(64);
@@ -217,15 +332,21 @@ int main(int argc, char** argv) {
     return 0;
   }
   // --only FILE: check just the shapes listed in FILE (one per line: q r q r ...) instead of enumerating.
-  std::vector<Shape> shapes;
+  // A row may end with "| q r q r ...": opponent stones already next to the shape.
+  std::vector<Shape> shapes, extras;
   for (int i = 1; i + 1 < argc; ++i) {
     if (std::string(argv[i]) != "--only") continue;
     std::ifstream in(argv[i + 1]);
     for (std::string row; std::getline(in, row);) {
-      std::istringstream cells(row);
-      Shape s;
+      const std::size_t bar = row.find('|');
+      std::istringstream cells(row.substr(0, bar)), other(bar == std::string::npos ? "" : row.substr(bar + 1));
+      Shape s, o;
       for (int q, r; cells >> q >> r;) s.push_back({q, r});
-      if (!s.empty()) shapes.push_back(s);
+      for (int q, r; other >> q >> r;) o.push_back({q, r});
+      if (!s.empty()) {
+        shapes.push_back(s);
+        extras.push_back(o);
+      }
     }
   }
   if (shapes.empty()) shapes = enumerate(maxStones);
@@ -240,11 +361,13 @@ int main(int argc, char** argv) {
       if (i >= shapes.size()) return;
       // Centre the shape near the origin so every reply cell is inside the placement radius.
       Shape shape = shapes[i];
+      const Shape theirs = i < extras.size() ? extras[i] : Shape{};
       std::ostringstream line;
       line << "{\"stones\":" << shape.size() << ",\"shape\":" << hexList(shape);
+      if (!theirs.empty()) line << ",\"theirs\":" << hexList(theirs);
 
       Board attack(8);
-      setUp(attack, shape, Player::X);
+      setUp(attack, shape, Player::X, theirs);
       solver.clear();
       const Result toMove = solveX(attack, solver, turns, nodes);
       line << ",\"toMove\":{\"win\":" << (toMove.win ? "true" : "false") << ",\"unknown\":" << (toMove.unknown ? "true" : "false")
@@ -254,7 +377,7 @@ int main(int argc, char** argv) {
 
       if (toMove.win && static_cast<int>(shape.size()) <= defend) {
         Board defense(8);
-        setUp(defense, shape, Player::O);
+        setUp(defense, shape, Player::O, theirs);
         std::vector<Hex> cells;
         for (Hex s : shape) {
           for (int dq = -region; dq <= region; ++dq) {
@@ -267,8 +390,9 @@ int main(int argc, char** argv) {
         }
         std::vector<std::vector<Hex>> holding;
         int unknown = 0, tried = 0;
-        for (std::size_t x = 0; x < cells.size(); ++x) {
-          for (std::size_t y = x + 1; y < cells.size(); ++y) {
+        // --first-hold 1 stops at the first holding reply: enough to tell unstoppable shapes apart, far faster.
+        for (std::size_t x = 0; x < cells.size() && !(firstHold && !holding.empty()); ++x) {
+          for (std::size_t y = x + 1; y < cells.size() && !(firstHold && !holding.empty()); ++y) {
             if (defense.place(cells[x]) != six::PlaceError::None) continue;
             if (defense.place(cells[y]) == six::PlaceError::None) {
               ++tried;

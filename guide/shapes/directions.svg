@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 44" width="520" height="44">
+<rect width="520" height="44" fill="#0b0e15"/>
+<line x1="-2.0" y1="22.0" x2="42.0" y2="22.0" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+<text x="50" y="27" font-family="Arial, sans-serif" font-size="14" fill="#d9e1f2">horizontal</text>
+<line x1="179.0" y1="41.1" x2="201.0" y2="2.9" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+<text x="220" y="27" font-family="Arial, sans-serif" font-size="14" fill="#d9e1f2">up-right diagonal</text>
+<line x1="349.0" y1="2.9" x2="371.0" y2="41.1" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+<text x="390" y="27" font-family="Arial, sans-serif" font-size="14" fill="#d9e1f2">down-right diagonal</text>
+</svg>
