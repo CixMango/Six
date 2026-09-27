@@ -462,7 +462,7 @@ def shape_block(r, label, extra_title="", radius=3, key_count=2, turns_shown=Tru
         (OUT / dname).write_text(svg(shape, defense=pair), encoding="utf-8")
         if i < key_count:
             imgs.append(f'<td align="center"><img src="shapes/{dname}" alt="{label} holding reply {i + 1}"><br>'
-                        f'Holds</td>')
+                        f'Stops the forced win</td>')
         else:
             more.append(f'<img src="shapes/{dname}" alt="{label} holding reply {i + 1}">')
     hname = name_file(shape, "_map")
@@ -1348,7 +1348,8 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
              "win** also needs at least one turn that isn't a double threat: a **quiet move** (no four, or a four one "
              "stone can block).", "",
              "**Key words:** a shape is **must-answer** if its owner, moving next, has a forced win; your reply **holds** "
-             "if the solver then finds no forced win; a shape is **unstoppable** if it wins even when you move first.",
+             "if the solver then finds no forced win (a quiet move can still win: both replies shown for the triangle A4 "
+             "still lose); a shape is **unstoppable** if it wins even when you move first.",
              "",
              "<details><summary>More words</summary>", "",
              "A **shape** is some of one player's stones with nothing else nearby; stones belong to one shape when "
@@ -1762,7 +1763,8 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
            "[4 stones containing a must-answer three](#4-stones-containing-a-must-answer-three) · [5 stones](#5-stones)", "",
            '<img src="shapes/legend.svg" alt="Diagram key">', "",
            "The threes are in the same order as the cheat sheet; the 4-stone must-answer shapes are sorted hardest first, by the share "
-           "of replies (pairs of empty cells within 3 cells of the shape) that hold. In names like \"Chevron 1+2\", the "
+           "of replies (pairs of empty cells within 3 cells of the shape) that hold. A reply that holds stops the forced win "
+           "only; the owner can often still win with a quiet move first (both replies shown for A4 lose that way). In names like \"Chevron 1+2\", the "
            "numbers are the distances from the corner stone to the other two.",
            "", "## Summary", "",
            "| Stones | Shapes | Must-answer | Minimal must-answer | Unstoppable (opponent moves first) |",

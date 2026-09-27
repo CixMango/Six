@@ -6,7 +6,7 @@ Every must-answer shape of up to 4 stones except the fours (on the [main page](s
 
 <img src="shapes/legend.svg" alt="Diagram key" width="520">
 
-The threes are in the same order as the cheat sheet; the 4-stone must-answer shapes are sorted hardest first, by the share of replies (pairs of empty cells within 3 cells of the shape) that hold. In names like "Chevron 1+2", the numbers are the distances from the corner stone to the other two.
+The threes are in the same order as the cheat sheet; the 4-stone must-answer shapes are sorted hardest first, by the share of replies (pairs of empty cells within 3 cells of the shape) that hold. A reply that holds stops the forced win only; the owner can often still win with a quiet move first (both replies shown for A4 lose that way). In names like "Chevron 1+2", the numbers are the distances from the corner stone to the other two.
 
 ## Summary
 
@@ -208,7 +208,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### A1 · Triangle 1+1
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_1x0.svg" alt="A1" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_1x0_d0.svg" alt="A1 holding reply 1" width="208"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_1x0_d1.svg" alt="A1 holding reply 2" width="208"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_1x0.svg" alt="A1" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_1x0_d0.svg" alt="A1 holding reply 1" width="208"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_1x0_d1.svg" alt="A1 holding reply 2" width="208"><br>Stops the forced win</td></tr></table>
 
 **4.8% of replies hold · needs both stones · all 48 two-lines pairs hold**
 
@@ -220,7 +220,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### A2 · Triangle 1+2
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_2xm1.svg" alt="A2" width="177"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_2xm1_d0.svg" alt="A2 holding reply 1" width="197"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_2xm1_d1.svg" alt="A2 holding reply 2" width="187"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_2xm1.svg" alt="A2" width="177"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_2xm1_d0.svg" alt="A2 holding reply 1" width="197"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_2xm1_d1.svg" alt="A2 holding reply 2" width="187"><br>Stops the forced win</td></tr></table>
 
 **5.1% of replies hold · needs both stones · all 20 two-lines pairs hold**
 
@@ -232,7 +232,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### A3 · Triangle 1+3
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_3xm2.svg" alt="A3" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_3xm2_d0.svg" alt="A3 holding reply 1" width="197"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_3xm2_d1.svg" alt="A3 holding reply 2" width="197"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_3xm2.svg" alt="A3" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_3xm2_d0.svg" alt="A3 holding reply 1" width="197"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_3xm2_d1.svg" alt="A3 holding reply 2" width="197"><br>Stops the forced win</td></tr></table>
 
 **5.8% of replies hold · needs both stones · all 24 two-lines pairs hold**
 
@@ -244,7 +244,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### A4 · Triangle 2+2
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x2_2x0.svg" alt="A4" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_2x0_d0.svg" alt="A4 holding reply 1" width="229"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x2_2x0_d1.svg" alt="A4 holding reply 2" width="229"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x2_2x0.svg" alt="A4" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_2x0_d0.svg" alt="A4 holding reply 1" width="229"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x2_2x0_d1.svg" alt="A4 holding reply 2" width="229"><br>Stops the forced win</td></tr></table>
 
 **4.9% of replies hold · needs both stones · all 75 two-lines pairs hold**
 
@@ -256,7 +256,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### A5 · Triangle 2+3
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x2_3xm1.svg" alt="A5" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_3xm1_d0.svg" alt="A5 holding reply 1" width="197"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x2_3xm1_d1.svg" alt="A5 holding reply 2" width="218"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x2_3xm1.svg" alt="A5" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_3xm1_d0.svg" alt="A5 holding reply 1" width="197"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x2_3xm1_d1.svg" alt="A5 holding reply 2" width="218"><br>Stops the forced win</td></tr></table>
 
 **5.5% of replies hold · needs both stones · all 30 two-lines pairs hold**
 
@@ -268,7 +268,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### A6 · Triangle 3+3
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x3_3x0.svg" alt="A6" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_3x0_d0.svg" alt="A6 holding reply 1" width="250"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x3_3x0_d1.svg" alt="A6 holding reply 2" width="250"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x3_3x0.svg" alt="A6" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_3x0_d0.svg" alt="A6 holding reply 1" width="250"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x3_3x0_d1.svg" alt="A6 holding reply 2" width="250"><br>Stops the forced win</td></tr></table>
 
 **5.2% of replies hold · needs both stones · all 108 two-lines pairs hold**
 
@@ -280,7 +280,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### A7 · Chevron 1+1
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_1xm1.svg" alt="A7" width="177"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_1xm1_d0.svg" alt="A7 holding reply 1" width="177"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_1xm1_d1.svg" alt="A7 holding reply 2" width="197"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_1xm1.svg" alt="A7" width="177"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_1xm1_d0.svg" alt="A7 holding reply 1" width="177"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_1xm1_d1.svg" alt="A7 holding reply 2" width="197"><br>Stops the forced win</td></tr></table>
 
 **5.4% of replies hold · needs both stones · all 16 two-lines pairs hold**
 
@@ -292,7 +292,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### A8 · Chevron 1+2
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_2xm2.svg" alt="A8" width="177"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_2xm2_d0.svg" alt="A8 holding reply 1" width="187"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_2xm2_d1.svg" alt="A8 holding reply 2" width="187"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_2xm2.svg" alt="A8" width="177"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_2xm2_d0.svg" alt="A8 holding reply 1" width="187"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_2xm2_d1.svg" alt="A8 holding reply 2" width="187"><br>Stops the forced win</td></tr></table>
 
 **6.4% of replies hold · needs both stones · all 20 two-lines pairs hold**
 
@@ -304,7 +304,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### A9 · Chevron 1+3
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_3xm3.svg" alt="A9" width="197"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_3xm3_d0.svg" alt="A9 holding reply 1" width="197"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_3xm3_d1.svg" alt="A9 holding reply 2" width="208"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_3xm3.svg" alt="A9" width="197"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_3xm3_d0.svg" alt="A9 holding reply 1" width="197"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_3xm3_d1.svg" alt="A9 holding reply 2" width="208"><br>Stops the forced win</td></tr></table>
 
 **35% of replies hold · one stone is enough on the 11 dotted cells in the map below**
 
@@ -316,7 +316,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### A10 · Chevron 2+2
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x2_2xm2.svg" alt="A10" width="177"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_2xm2_d0.svg" alt="A10 holding reply 1" width="187"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x2_2xm2_d1.svg" alt="A10 holding reply 2" width="187"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x2_2xm2.svg" alt="A10" width="177"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_2xm2_d0.svg" alt="A10 holding reply 1" width="187"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x2_2xm2_d1.svg" alt="A10 holding reply 2" width="187"><br>Stops the forced win</td></tr></table>
 
 **32% of replies hold · one stone is enough on the 10 dotted cells in the map below**
 
@@ -328,7 +328,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### A11 · Chevron 2+3
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x2_3xm3.svg" alt="A11" width="187"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_3xm3_d0.svg" alt="A11 holding reply 1" width="229"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x2_3xm3_d1.svg" alt="A11 holding reply 2" width="229"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x2_3xm3.svg" alt="A11" width="187"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_3xm3_d0.svg" alt="A11 holding reply 1" width="229"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x2_3xm3_d1.svg" alt="A11 holding reply 2" width="229"><br>Stops the forced win</td></tr></table>
 
 **46% of replies hold · one stone is enough on the 17 dotted cells in the map below**
 
@@ -340,7 +340,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### A12 · Line 1+2
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_0x3.svg" alt="A12" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_0x3_d0.svg" alt="A12 holding reply 1" width="197"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_0x3_d1.svg" alt="A12 holding reply 2" width="197"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_0x3.svg" alt="A12" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_0x3_d0.svg" alt="A12 holding reply 1" width="197"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_0x3_d1.svg" alt="A12 holding reply 2" width="197"><br>Stops the forced win</td></tr></table>
 
 **18% of replies hold · one stone is enough on the 5 dotted cells in the map below**
 
@@ -352,7 +352,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### A13 · One-gap pair + 1 (2,3)
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x2_2xm1.svg" alt="A13" width="187"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_2xm1_d0.svg" alt="A13 holding reply 1" width="197"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x2_2xm1_d1.svg" alt="A13 holding reply 2" width="197"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x2_2xm1.svg" alt="A13" width="187"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_2xm1_d0.svg" alt="A13 holding reply 1" width="197"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x2_2xm1_d1.svg" alt="A13 holding reply 2" width="197"><br>Stops the forced win</td></tr></table>
 
 **19% of replies hold · one stone is enough on the 5 dotted cells in the map below**
 
@@ -364,7 +364,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### A14 · One-gap pair + 1 (2,4)
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x2_1xm2.svg" alt="A14" width="177"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_1xm2_d0.svg" alt="A14 holding reply 1" width="208"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x2_1xm2_d1.svg" alt="A14 holding reply 2" width="208"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x2_1xm2.svg" alt="A14" width="177"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_1xm2_d0.svg" alt="A14 holding reply 1" width="208"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x2_1xm2_d1.svg" alt="A14 holding reply 2" width="208"><br>Stops the forced win</td></tr></table>
 
 **35% of replies hold · one stone is enough on the 11 dotted cells in the map below**
 
@@ -376,7 +376,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### A15 · Pair + 1 (2,3)
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_1xm2.svg" alt="A15" width="177"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_1xm2_d0.svg" alt="A15 holding reply 1" width="187"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_1xm2_d1.svg" alt="A15 holding reply 2" width="187"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_1xm2.svg" alt="A15" width="177"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_1xm2_d0.svg" alt="A15 holding reply 1" width="187"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_1xm2_d1.svg" alt="A15 holding reply 2" width="187"><br>Stops the forced win</td></tr></table>
 
 **21% of replies hold · one stone is enough on the 5 dotted cells in the map below**
 
@@ -388,7 +388,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### A16 · Three in a row · unstoppable in open space (U1)
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_0x2.svg" alt="A16" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_0x2_d0.svg" alt="A16 holding reply 1" width="187"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_0x2_d1.svg" alt="A16 holding reply 2" width="197"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_0x2.svg" alt="A16" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_0x2_d0.svg" alt="A16 holding reply 1" width="187"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_0x2_d1.svg" alt="A16 holding reply 2" width="197"><br>Stops the forced win</td></tr></table>
 
 **16% of replies hold · one stone is enough on the 4 dotted cells in the map below**
 
@@ -400,7 +400,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### A17 · Two-gap pair + 1 (2,2)
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x3_1x1.svg" alt="A17" width="177"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_1x1_d0.svg" alt="A17 holding reply 1" width="197"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x3_1x1_d1.svg" alt="A17 holding reply 2" width="197"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x3_1x1.svg" alt="A17" width="177"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_1x1_d0.svg" alt="A17 holding reply 1" width="197"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x3_1x1_d1.svg" alt="A17 holding reply 2" width="197"><br>Stops the forced win</td></tr></table>
 
 **21% of replies hold · one stone is enough on the 6 dotted cells in the map below**
 
@@ -412,7 +412,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### A18 · Two-gap pair + 1 (2,4)
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x3_2xm1.svg" alt="A18" width="177"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_2xm1_d0.svg" alt="A18 holding reply 1" width="187"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x3_2xm1_d1.svg" alt="A18 holding reply 2" width="197"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x3_2xm1.svg" alt="A18" width="177"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_2xm1_d0.svg" alt="A18 holding reply 1" width="187"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x3_2xm1_d1.svg" alt="A18 holding reply 2" width="197"><br>Stops the forced win</td></tr></table>
 
 **33% of replies hold · one stone is enough on the 11 dotted cells in the map below**
 
@@ -449,7 +449,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B1
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x3_0x4_0x7.svg" alt="B1" width="250"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_0x4_0x7_d0.svg" alt="B1 holding reply 1" width="218"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x3_0x4_0x7_d1.svg" alt="B1 holding reply 2" width="218"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x3_0x4_0x7.svg" alt="B1" width="250"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_0x4_0x7_d0.svg" alt="B1 holding reply 1" width="218"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x3_0x4_0x7_d1.svg" alt="B1 holding reply 2" width="218"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 9.6% of replies hold · one stone is enough on the 4 dotted cells in the map below**
 
@@ -461,7 +461,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B2
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x3_0x4_0x8.svg" alt="B2" width="250"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_0x4_0x8_d0.svg" alt="B2 holding reply 1" width="229"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x3_0x4_0x8_d1.svg" alt="B2 holding reply 2" width="229"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x3_0x4_0x8.svg" alt="B2" width="250"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_0x4_0x8_d0.svg" alt="B2 holding reply 1" width="229"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x3_0x4_0x8_d1.svg" alt="B2 holding reply 2" width="229"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 11% of replies hold · one stone is enough on the 5 dotted cells in the map below**
 
@@ -473,7 +473,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B3
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x3_0x5_0x8.svg" alt="B3" width="239"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_0x5_0x8_d0.svg" alt="B3 holding reply 1" width="229"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x3_0x5_0x8_d1.svg" alt="B3 holding reply 2" width="229"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x3_0x5_0x8.svg" alt="B3" width="239"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_0x5_0x8_d0.svg" alt="B3 holding reply 1" width="229"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x3_0x5_0x8_d1.svg" alt="B3 holding reply 2" width="229"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 11% of replies hold · one stone is enough on the 5 dotted cells in the map below**
 
@@ -485,7 +485,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B4
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x2_0x4_0x7.svg" alt="B4" width="250"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_0x4_0x7_d0.svg" alt="B4 holding reply 1" width="229"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x2_0x4_0x7_d1.svg" alt="B4 holding reply 2" width="229"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x2_0x4_0x7.svg" alt="B4" width="250"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_0x4_0x7_d0.svg" alt="B4 holding reply 1" width="229"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x2_0x4_0x7_d1.svg" alt="B4 holding reply 2" width="229"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 12% of replies hold · one stone is enough on the 5 dotted cells in the map below**
 
@@ -497,7 +497,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B5
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x2_0x4_0x6.svg" alt="B5" width="239"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_0x4_0x6_d0.svg" alt="B5 holding reply 1" width="218"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x2_0x4_0x6_d1.svg" alt="B5 holding reply 2" width="218"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x2_0x4_0x6.svg" alt="B5" width="239"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_0x4_0x6_d0.svg" alt="B5 holding reply 1" width="218"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x2_0x4_0x6_d1.svg" alt="B5 holding reply 2" width="218"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 13% of replies hold · one stone is enough on the 5 dotted cells in the map below**
 
@@ -509,7 +509,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B6
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_0x5_3x2.svg" alt="B6" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_0x5_3x2_d0.svg" alt="B6 holding reply 1" width="250"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_0x5_3x2_d1.svg" alt="B6 holding reply 2" width="250"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_0x5_3x2.svg" alt="B6" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_0x5_3x2_d0.svg" alt="B6 holding reply 1" width="250"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_0x5_3x2_d1.svg" alt="B6 holding reply 2" width="250"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 16% of replies hold · one stone is enough on the 5 dotted cells in the map below**
 
@@ -521,7 +521,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B7
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_0x5_2x3.svg" alt="B7" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_0x5_2x3_d0.svg" alt="B7 holding reply 1" width="239"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_0x5_2x3_d1.svg" alt="B7 holding reply 2" width="239"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_0x5_2x3.svg" alt="B7" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_0x5_2x3_d0.svg" alt="B7 holding reply 1" width="239"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_0x5_2x3_d1.svg" alt="B7 holding reply 2" width="239"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 16% of replies hold · one stone is enough on the 5 dotted cells in the map below**
 
@@ -533,7 +533,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B8
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_0x5_1x3.svg" alt="B8" width="197"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_0x5_1x3_d0.svg" alt="B8 holding reply 1" width="208"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_0x5_1x3_d1.svg" alt="B8 holding reply 2" width="218"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_0x5_1x3.svg" alt="B8" width="197"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_0x5_1x3_d0.svg" alt="B8 holding reply 1" width="208"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_0x5_1x3_d1.svg" alt="B8 holding reply 2" width="218"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 24% of replies hold · one stone is enough on the 9 dotted cells in the map below**
 
@@ -545,7 +545,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B9
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_0x5_1x4.svg" alt="B9" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_0x5_1x4_d0.svg" alt="B9 holding reply 1" width="208"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_0x5_1x4_d1.svg" alt="B9 holding reply 2" width="218"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_0x5_1x4.svg" alt="B9" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_0x5_1x4_d0.svg" alt="B9 holding reply 1" width="208"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_0x5_1x4_d1.svg" alt="B9 holding reply 2" width="218"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 28% of replies hold · one stone is enough on the 10 dotted cells in the map below**
 
@@ -557,7 +557,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B10
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_0x5_1x5.svg" alt="B10" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_0x5_1x5_d0.svg" alt="B10 holding reply 1" width="229"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_0x5_1x5_d1.svg" alt="B10 holding reply 2" width="229"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_0x5_1x5.svg" alt="B10" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_0x5_1x5_d0.svg" alt="B10 holding reply 1" width="229"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_0x5_1x5_d1.svg" alt="B10 holding reply 2" width="229"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 35% of replies hold · one stone is enough on the 14 dotted cells in the map below**
 
@@ -640,7 +640,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B11
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_2xm3_4xm3.svg" alt="B11" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_2xm3_4xm3_d0.svg" alt="B11 holding reply 1" width="229"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_2xm3_4xm3_d1.svg" alt="B11 holding reply 2" width="229"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_2xm3_4xm3.svg" alt="B11" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_2xm3_4xm3_d0.svg" alt="B11 holding reply 1" width="229"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_2xm3_4xm3_d1.svg" alt="B11 holding reply 2" width="229"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 5 · 6.9% of replies hold · one stone is enough on the 1 dotted cell in the map below**
 
@@ -652,7 +652,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B12
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_1xm3_4xm3.svg" alt="B12" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_1xm3_4xm3_d0.svg" alt="B12 holding reply 1" width="229"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_1xm3_4xm3_d1.svg" alt="B12 holding reply 2" width="229"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_1xm3_4xm3.svg" alt="B12" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_1xm3_4xm3_d0.svg" alt="B12 holding reply 1" width="229"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_1xm3_4xm3_d1.svg" alt="B12 holding reply 2" width="229"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 5 · 7.2% of replies hold · one stone is enough on the 1 dotted cell in the map below**
 
@@ -664,7 +664,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B13
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x3_0x7_1x4.svg" alt="B13" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_0x7_1x4_d0.svg" alt="B13 holding reply 1" width="218"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x3_0x7_1x4_d1.svg" alt="B13 holding reply 2" width="218"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x3_0x7_1x4.svg" alt="B13" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_0x7_1x4_d0.svg" alt="B13 holding reply 1" width="218"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x3_0x7_1x4_d1.svg" alt="B13 holding reply 2" width="218"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 12% of replies hold · one stone is enough on the 5 dotted cells in the map below**
 
@@ -676,7 +676,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B14
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_3xm1_4xm3.svg" alt="B14" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_3xm1_4xm3_d0.svg" alt="B14 holding reply 1" width="218"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_3xm1_4xm3_d1.svg" alt="B14 holding reply 2" width="218"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_3xm1_4xm3.svg" alt="B14" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_3xm1_4xm3_d0.svg" alt="B14 holding reply 1" width="218"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_3xm1_4xm3_d1.svg" alt="B14 holding reply 2" width="218"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 5 · 14% of replies hold · one stone is enough on the 4 dotted cells in the map below**
 
@@ -688,7 +688,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B15
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x3_0x7_3x4.svg" alt="B15" width="250"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_0x7_3x4_d0.svg" alt="B15 holding reply 1" width="250"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x3_0x7_3x4_d1.svg" alt="B15 holding reply 2" width="250"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x3_0x7_3x4.svg" alt="B15" width="250"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_0x7_3x4_d0.svg" alt="B15 holding reply 1" width="250"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x3_0x7_3x4_d1.svg" alt="B15 holding reply 2" width="250"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 14% of replies hold · one stone is enough on the 5 dotted cells in the map below**
 
@@ -700,7 +700,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B16
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x4_0x8_2x3.svg" alt="B16" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x4_0x8_2x3_d0.svg" alt="B16 holding reply 1" width="229"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x4_0x8_2x3_d1.svg" alt="B16 holding reply 2" width="229"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x4_0x8_2x3.svg" alt="B16" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x4_0x8_2x3_d0.svg" alt="B16 holding reply 1" width="229"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x4_0x8_2x3_d1.svg" alt="B16 holding reply 2" width="229"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 14% of replies hold · one stone is enough on the 6 dotted cells in the map below**
 
@@ -712,7 +712,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B17
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x2_4xm2_7xm5.svg" alt="B17" width="250"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_4xm2_7xm5_d0.svg" alt="B17 holding reply 1" width="239"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x2_4xm2_7xm5_d1.svg" alt="B17 holding reply 2" width="239"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x2_4xm2_7xm5.svg" alt="B17" width="250"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_4xm2_7xm5_d0.svg" alt="B17 holding reply 1" width="239"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x2_4xm2_7xm5_d1.svg" alt="B17 holding reply 2" width="239"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 14% of replies hold · one stone is enough on the 5 dotted cells in the map below**
 
@@ -724,7 +724,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B18
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x2_0x6_3x3.svg" alt="B18" width="239"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_0x6_3x3_d0.svg" alt="B18 holding reply 1" width="250"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x2_0x6_3x3_d1.svg" alt="B18 holding reply 2" width="250"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x2_0x6_3x3.svg" alt="B18" width="239"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_0x6_3x3_d0.svg" alt="B18 holding reply 1" width="250"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x2_0x6_3x3_d1.svg" alt="B18 holding reply 2" width="250"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 15% of replies hold · one stone is enough on the 5 dotted cells in the map below**
 
@@ -736,7 +736,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B19
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x4_0x8_1x3.svg" alt="B19" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x4_0x8_1x3_d0.svg" alt="B19 holding reply 1" width="229"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x4_0x8_1x3_d1.svg" alt="B19 holding reply 2" width="229"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x4_0x8_1x3.svg" alt="B19" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x4_0x8_1x3_d0.svg" alt="B19 holding reply 1" width="229"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x4_0x8_1x3_d1.svg" alt="B19 holding reply 2" width="229"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 15% of replies hold · one stone is enough on the 6 dotted cells in the map below**
 
@@ -748,7 +748,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B20
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x2_0x6_2x4.svg" alt="B20" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_0x6_2x4_d0.svg" alt="B20 holding reply 1" width="239"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x2_0x6_2x4_d1.svg" alt="B20 holding reply 2" width="239"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x2_0x6_2x4.svg" alt="B20" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_0x6_2x4_d0.svg" alt="B20 holding reply 1" width="239"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x2_0x6_2x4_d1.svg" alt="B20 holding reply 2" width="239"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 16% of replies hold · one stone is enough on the 5 dotted cells in the map below**
 
@@ -760,7 +760,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B21
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x4_0x8_1x2.svg" alt="B21" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x4_0x8_1x2_d0.svg" alt="B21 holding reply 1" width="229"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x4_0x8_1x2_d1.svg" alt="B21 holding reply 2" width="229"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x4_0x8_1x2.svg" alt="B21" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x4_0x8_1x2_d0.svg" alt="B21 holding reply 1" width="229"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x4_0x8_1x2_d1.svg" alt="B21 holding reply 2" width="229"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 21% of replies hold · one stone is enough on the 10 dotted cells in the map below**
 
@@ -772,7 +772,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B22
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_2xm4_4xm4.svg" alt="B22" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_2xm4_4xm4_d0.svg" alt="B22 holding reply 1" width="229"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_2xm4_4xm4_d1.svg" alt="B22 holding reply 2" width="218"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_2xm4_4xm4.svg" alt="B22" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_2xm4_4xm4_d0.svg" alt="B22 holding reply 1" width="229"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_2xm4_4xm4_d1.svg" alt="B22 holding reply 2" width="218"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 5 · 21% of replies hold · one stone is enough on the 6 dotted cells in the map below**
 
@@ -784,7 +784,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B23
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x3_0x7_1x5.svg" alt="B23" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_0x7_1x5_d0.svg" alt="B23 holding reply 1" width="218"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x3_0x7_1x5_d1.svg" alt="B23 holding reply 2" width="218"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x3_0x7_1x5.svg" alt="B23" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_0x7_1x5_d0.svg" alt="B23 holding reply 1" width="218"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x3_0x7_1x5_d1.svg" alt="B23 holding reply 2" width="218"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 22% of replies hold · one stone is enough on the 10 dotted cells in the map below**
 
@@ -796,7 +796,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B24
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x3_0x7_3x3.svg" alt="B24" width="239"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_0x7_3x3_d0.svg" alt="B24 holding reply 1" width="250"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x3_0x7_3x3_d1.svg" alt="B24 holding reply 2" width="250"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x3_0x7_3x3.svg" alt="B24" width="239"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_0x7_3x3_d0.svg" alt="B24 holding reply 1" width="250"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x3_0x7_3x3_d1.svg" alt="B24 holding reply 2" width="250"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 23% of replies hold · one stone is enough on the 11 dotted cells in the map below**
 
@@ -808,7 +808,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B25
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x4_0x8_2x2.svg" alt="B25" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x4_0x8_2x2_d0.svg" alt="B25 holding reply 1" width="229"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x4_0x8_2x2_d1.svg" alt="B25 holding reply 2" width="229"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x4_0x8_2x2.svg" alt="B25" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x4_0x8_2x2_d0.svg" alt="B25 holding reply 1" width="229"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x4_0x8_2x2_d1.svg" alt="B25 holding reply 2" width="229"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 24% of replies hold · one stone is enough on the 11 dotted cells in the map below**
 
@@ -820,7 +820,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B26
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x2_0x6_1x4.svg" alt="B26" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_0x6_1x4_d0.svg" alt="B26 holding reply 1" width="208"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x2_0x6_1x4_d1.svg" alt="B26 holding reply 2" width="208"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x2_0x6_1x4.svg" alt="B26" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_0x6_1x4_d0.svg" alt="B26 holding reply 1" width="208"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x2_0x6_1x4_d1.svg" alt="B26 holding reply 2" width="208"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 24% of replies hold · one stone is enough on the 10 dotted cells in the map below**
 
@@ -832,7 +832,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B27
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_4xm3_7xm6.svg" alt="B27" width="250"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_4xm3_7xm6_d0.svg" alt="B27 holding reply 1" width="260"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_4xm3_7xm6_d1.svg" alt="B27 holding reply 2" width="260"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_4xm3_7xm6.svg" alt="B27" width="250"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_4xm3_7xm6_d0.svg" alt="B27 holding reply 1" width="260"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_4xm3_7xm6_d1.svg" alt="B27 holding reply 2" width="260"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 24% of replies hold · one stone is enough on the 10 dotted cells in the map below**
 
@@ -844,7 +844,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B28
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_4xm3_6xm5.svg" alt="B28" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_4xm3_6xm5_d0.svg" alt="B28 holding reply 1" width="250"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_4xm3_6xm5_d1.svg" alt="B28 holding reply 2" width="250"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_4xm3_6xm5.svg" alt="B28" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_4xm3_6xm5_d0.svg" alt="B28 holding reply 1" width="250"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_4xm3_6xm5_d1.svg" alt="B28 holding reply 2" width="250"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 26% of replies hold · one stone is enough on the 10 dotted cells in the map below**
 
@@ -856,7 +856,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B29
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_2xm3_4xm4.svg" alt="B29" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_2xm3_4xm4_d0.svg" alt="B29 holding reply 1" width="218"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_2xm3_4xm4_d1.svg" alt="B29 holding reply 2" width="218"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_2xm3_4xm4.svg" alt="B29" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_2xm3_4xm4_d0.svg" alt="B29 holding reply 1" width="218"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_2xm3_4xm4_d1.svg" alt="B29 holding reply 2" width="218"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 5 · 27% of replies hold · one stone is enough on the 10 dotted cells in the map below**
 
@@ -868,7 +868,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B30
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x3_3xm3_3x1.svg" alt="B30" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_3xm3_3x1_d0.svg" alt="B30 holding reply 1" width="250"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x3_3xm3_3x1_d1.svg" alt="B30 holding reply 2" width="250"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x3_3xm3_3x1.svg" alt="B30" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_3xm3_3x1_d0.svg" alt="B30 holding reply 1" width="250"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x3_3xm3_3x1_d1.svg" alt="B30 holding reply 2" width="250"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 5 · 27% of replies hold · one stone is enough on the 12 dotted cells in the map below**
 
@@ -880,7 +880,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B31
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x2_3xm2_4xm4.svg" alt="B31" width="197"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_3xm2_4xm4_d0.svg" alt="B31 holding reply 1" width="197"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x2_3xm2_4xm4_d1.svg" alt="B31 holding reply 2" width="208"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x2_3xm2_4xm4.svg" alt="B31" width="197"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_3xm2_4xm4_d0.svg" alt="B31 holding reply 1" width="197"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x2_3xm2_4xm4_d1.svg" alt="B31 holding reply 2" width="208"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 5 · 28% of replies hold · one stone is enough on the 11 dotted cells in the map below**
 
@@ -892,7 +892,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B32
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x2_2xm3_4xm4.svg" alt="B32" width="197"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_2xm3_4xm4_d0.svg" alt="B32 holding reply 1" width="218"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x2_2xm3_4xm4_d1.svg" alt="B32 holding reply 2" width="218"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x2_2xm3_4xm4.svg" alt="B32" width="197"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_2xm3_4xm4_d0.svg" alt="B32 holding reply 1" width="218"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x2_2xm3_4xm4_d1.svg" alt="B32 holding reply 2" width="218"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 28% of replies hold · one stone is enough on the 11 dotted cells in the map below**
 
@@ -904,7 +904,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B33
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x4_1x1_4x1.svg" alt="B33" width="239"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x4_1x1_4x1_d0.svg" alt="B33 holding reply 1" width="239"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x4_1x1_4x1_d1.svg" alt="B33 holding reply 2" width="239"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x4_1x1_4x1.svg" alt="B33" width="239"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x4_1x1_4x1_d0.svg" alt="B33 holding reply 1" width="239"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x4_1x1_4x1_d1.svg" alt="B33 holding reply 2" width="239"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 28% of replies hold · one stone is enough on the 12 dotted cells in the map below**
 
@@ -916,7 +916,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B34
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x3_3xm1_4x0.svg" alt="B34" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_3xm1_4x0_d0.svg" alt="B34 holding reply 1" width="229"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x3_3xm1_4x0_d1.svg" alt="B34 holding reply 2" width="229"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x3_3xm1_4x0.svg" alt="B34" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_3xm1_4x0_d0.svg" alt="B34 holding reply 1" width="229"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x3_3xm1_4x0_d1.svg" alt="B34 holding reply 2" width="229"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 5 · 29% of replies hold · one stone is enough on the 12 dotted cells in the map below**
 
@@ -928,7 +928,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B35
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x4_0x8_3x1.svg" alt="B35" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x4_0x8_3x1_d0.svg" alt="B35 holding reply 1" width="239"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x4_0x8_3x1_d1.svg" alt="B35 holding reply 2" width="239"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x4_0x8_3x1.svg" alt="B35" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x4_0x8_3x1_d0.svg" alt="B35 holding reply 1" width="239"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x4_0x8_3x1_d1.svg" alt="B35 holding reply 2" width="239"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 34% of replies hold · one stone is enough on the 17 dotted cells in the map below**
 
@@ -940,7 +940,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B36
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_4xm4_7xm7.svg" alt="B36" width="239"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_4xm4_7xm7_d0.svg" alt="B36 holding reply 1" width="260"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_4xm4_7xm7_d1.svg" alt="B36 holding reply 2" width="260"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_4xm4_7xm7.svg" alt="B36" width="239"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_4xm4_7xm7_d0.svg" alt="B36 holding reply 1" width="260"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_4xm4_7xm7_d1.svg" alt="B36 holding reply 2" width="260"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 7 · 34% of replies hold · one stone is enough on the 16 dotted cells in the map below**
 
@@ -952,7 +952,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B37
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_3xm4_4xm4.svg" alt="B37" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_3xm4_4xm4_d0.svg" alt="B37 holding reply 1" width="218"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_3xm4_4xm4_d1.svg" alt="B37 holding reply 2" width="229"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_3xm4_4xm4.svg" alt="B37" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_3xm4_4xm4_d0.svg" alt="B37 holding reply 1" width="218"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_3xm4_4xm4_d1.svg" alt="B37 holding reply 2" width="229"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 5 · 34% of replies hold · one stone is enough on the 13 dotted cells in the map below**
 
@@ -964,7 +964,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B38
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_4xm4_6xm6.svg" alt="B38" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_4xm4_6xm6_d0.svg" alt="B38 holding reply 1" width="250"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_4xm4_6xm6_d1.svg" alt="B38 holding reply 2" width="250"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_4xm4_6xm6.svg" alt="B38" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_4xm4_6xm6_d0.svg" alt="B38 holding reply 1" width="250"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_4xm4_6xm6_d1.svg" alt="B38 holding reply 2" width="250"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 7 · 37% of replies hold · one stone is enough on the 16 dotted cells in the map below**
 
@@ -976,7 +976,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B39
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x3_3xm2_4xm4.svg" alt="B39" width="187"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_3xm2_4xm4_d0.svg" alt="B39 holding reply 1" width="229"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x3_3xm2_4xm4_d1.svg" alt="B39 holding reply 2" width="229"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x3_3xm2_4xm4.svg" alt="B39" width="187"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_3xm2_4xm4_d0.svg" alt="B39 holding reply 1" width="229"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x3_3xm2_4xm4_d1.svg" alt="B39 holding reply 2" width="229"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 37% of replies hold · one stone is enough on the 17 dotted cells in the map below**
 
@@ -988,7 +988,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B40
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x3_4xm1_8xm5.svg" alt="B40" width="260"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_4xm1_8xm5_d0.svg" alt="B40 holding reply 1" width="302"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x3_4xm1_8xm5_d1.svg" alt="B40 holding reply 2" width="302"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x3_4xm1_8xm5.svg" alt="B40" width="260"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_4xm1_8xm5_d0.svg" alt="B40 holding reply 1" width="302"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x3_4xm1_8xm5_d1.svg" alt="B40 holding reply 2" width="302"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 7 · 37% of replies hold · one stone is enough on the 19 dotted cells in the map below**
 
@@ -1000,7 +1000,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B41
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_4xm3_8xm7.svg" alt="B41" width="260"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_4xm3_8xm7_d0.svg" alt="B41 holding reply 1" width="280"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_4xm3_8xm7_d1.svg" alt="B41 holding reply 2" width="280"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_4xm3_8xm7.svg" alt="B41" width="260"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_4xm3_8xm7_d0.svg" alt="B41 holding reply 1" width="280"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_4xm3_8xm7_d1.svg" alt="B41 holding reply 2" width="280"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 7 · 38% of replies hold · one stone is enough on the 17 dotted cells in the map below**
 
@@ -1012,7 +1012,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B42
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x3_3xm2_4xm1.svg" alt="B42" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_3xm2_4xm1_d0.svg" alt="B42 holding reply 1" width="260"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x3_3xm2_4xm1_d1.svg" alt="B42 holding reply 2" width="260"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x3_3xm2_4xm1.svg" alt="B42" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x3_3xm2_4xm1_d0.svg" alt="B42 holding reply 1" width="260"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x3_3xm2_4xm1_d1.svg" alt="B42 holding reply 2" width="260"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 5 · 38% of replies hold · one stone is enough on the 17 dotted cells in the map below**
 
@@ -1024,7 +1024,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B43
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_3xm4_4xm3.svg" alt="B43" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_3xm4_4xm3_d0.svg" alt="B43 holding reply 1" width="239"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_3xm4_4xm3_d1.svg" alt="B43 holding reply 2" width="229"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_3xm4_4xm3.svg" alt="B43" width="218"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_3xm4_4xm3_d0.svg" alt="B43 holding reply 1" width="239"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_3xm4_4xm3_d1.svg" alt="B43 holding reply 2" width="229"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 5 · 39% of replies hold · one stone is enough on the 16 dotted cells in the map below**
 
@@ -1036,7 +1036,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B44
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x2_4xm2_8xm6.svg" alt="B44" width="260"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_4xm2_8xm6_d0.svg" alt="B44 holding reply 1" width="302"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x2_4xm2_8xm6_d1.svg" alt="B44 holding reply 2" width="302"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x2_4xm2_8xm6.svg" alt="B44" width="260"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_4xm2_8xm6_d0.svg" alt="B44 holding reply 1" width="302"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x2_4xm2_8xm6_d1.svg" alt="B44 holding reply 2" width="302"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 7 · 39% of replies hold · one stone is enough on the 19 dotted cells in the map below**
 
@@ -1048,7 +1048,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B45
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x2_2xm4_4xm4.svg" alt="B45" width="197"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_2xm4_4xm4_d0.svg" alt="B45 holding reply 1" width="218"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x2_2xm4_4xm4_d1.svg" alt="B45 holding reply 2" width="229"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x2_2xm4_4xm4.svg" alt="B45" width="197"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_2xm4_4xm4_d0.svg" alt="B45 holding reply 1" width="218"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x2_2xm4_4xm4_d1.svg" alt="B45 holding reply 2" width="229"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 41% of replies hold · one stone is enough on the 18 dotted cells in the map below**
 
@@ -1060,7 +1060,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B46
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x2_1xm4_4xm4.svg" alt="B46" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_1xm4_4xm4_d0.svg" alt="B46 holding reply 1" width="250"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x2_1xm4_4xm4_d1.svg" alt="B46 holding reply 2" width="218"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x2_1xm4_4xm4.svg" alt="B46" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x2_1xm4_4xm4_d0.svg" alt="B46 holding reply 1" width="250"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x2_1xm4_4xm4_d1.svg" alt="B46 holding reply 2" width="218"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 41% of replies hold · one stone is enough on the 19 dotted cells in the map below**
 
@@ -1072,7 +1072,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B47
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_4xm4_5xm4.svg" alt="B47" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_4xm4_5xm4_d0.svg" alt="B47 holding reply 1" width="239"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_4xm4_5xm4_d1.svg" alt="B47 holding reply 2" width="239"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_4xm4_5xm4.svg" alt="B47" width="229"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_4xm4_5xm4_d0.svg" alt="B47 holding reply 1" width="239"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_4xm4_5xm4_d1.svg" alt="B47 holding reply 2" width="239"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 42% of replies hold · one stone is enough on the 17 dotted cells in the map below**
 
@@ -1084,7 +1084,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B48
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_4xm3_6xm3.svg" alt="B48" width="260"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_4xm3_6xm3_d0.svg" alt="B48 holding reply 1" width="260"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_4xm3_6xm3_d1.svg" alt="B48 holding reply 2" width="270"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_4xm3_6xm3.svg" alt="B48" width="260"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_4xm3_6xm3_d0.svg" alt="B48 holding reply 1" width="260"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_4xm3_6xm3_d1.svg" alt="B48 holding reply 2" width="270"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 43% of replies hold · one stone is enough on the 18 dotted cells in the map below**
 
@@ -1096,7 +1096,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B49
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_1xm4_4xm4.svg" alt="B49" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_1xm4_4xm4_d0.svg" alt="B49 holding reply 1" width="250"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_1xm4_4xm4_d1.svg" alt="B49 holding reply 2" width="218"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_1xm4_4xm4.svg" alt="B49" width="208"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_1xm4_4xm4_d0.svg" alt="B49 holding reply 1" width="250"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_1xm4_4xm4_d1.svg" alt="B49 holding reply 2" width="218"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 44% of replies hold · one stone is enough on the 19 dotted cells in the map below**
 
@@ -1108,7 +1108,7 @@ Every shape of 2 to 4 stones that no proof settled with the defender moving firs
 
 ### B50
 
-<table><tr><td align="center"><img src="shapes/s0x0_0x1_4xm4_6xm4.svg" alt="B50" width="250"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_4xm4_6xm4_d0.svg" alt="B50 holding reply 1" width="270"><br>Holds</td><td align="center"><img src="shapes/s0x0_0x1_4xm4_6xm4_d1.svg" alt="B50 holding reply 2" width="260"><br>Holds</td></tr></table>
+<table><tr><td align="center"><img src="shapes/s0x0_0x1_4xm4_6xm4.svg" alt="B50" width="250"><br>Winning first turn</td><td align="center"><img src="shapes/s0x0_0x1_4xm4_6xm4_d0.svg" alt="B50 holding reply 1" width="270"><br>Stops the forced win</td><td align="center"><img src="shapes/s0x0_0x1_4xm4_6xm4_d1.svg" alt="B50 holding reply 2" width="260"><br>Stops the forced win</td></tr></table>
 
 **Six on turn 6 · 48% of replies hold · one stone is enough on the 21 dotted cells in the map below**
 

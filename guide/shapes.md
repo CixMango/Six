@@ -8,7 +8,7 @@ Every small shape of one player's stones, checked by the forced-win solver in Si
 
 **Tempo:** some fours take one stone to block, others (like four in a row with open ends) take both. A defender who spends both stones builds nothing. A **forced win** is a four every turn that takes both stones (a **double threat**), until one turn's threats take three or more stones to block. A **non-forced win** also needs at least one turn that isn't a double threat: a **quiet move** (no four, or a four one stone can block).
 
-**Key words:** a shape is **must-answer** if its owner, moving next, has a forced win; your reply **holds** if the solver then finds no forced win; a shape is **unstoppable** if it wins even when you move first.
+**Key words:** a shape is **must-answer** if its owner, moving next, has a forced win; your reply **holds** if the solver then finds no forced win (a quiet move can still win: both replies shown for the triangle A4 still lose); a shape is **unstoppable** if it wins even when you move first.
 
 <details><summary>More words</summary>
 
