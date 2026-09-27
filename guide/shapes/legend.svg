@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 312" width="520" height="312">
-<rect width="520" height="312" fill="#0b0e15"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 236" width="520" height="236">
+<rect width="520" height="236" fill="#0b0e15"/>
 <polygon points="36.7,14.6 36.7,29.4 24.0,36.7 11.3,29.4 11.3,14.6 24.0,7.3" fill="#f6d04a"/>
 <text x="50" y="27" font-family="Arial, sans-serif" font-size="15" fill="#d9e1f2">The shape: the owner's stones</text>
 <polygon points="36.7,52.6 36.7,67.4 24.0,74.7 11.3,67.4 11.3,52.6 24.0,45.3" fill="#1b2233"/>
@@ -13,13 +13,7 @@
 <circle cx="24" cy="174" r="4.8" fill="#0b0e15"/>
 <text x="50" y="179" font-family="Arial, sans-serif" font-size="15" fill="#d9e1f2">Holds on its own, whatever the second stone does</text>
 <polygon points="36.7,204.6 36.7,219.4 24.0,226.7 11.3,219.4 11.3,204.6 24.0,197.3" fill="#1b2233"/>
-<circle cx="24" cy="212" r="5.4" fill="#87d1f7"/>
-<text x="50" y="217" font-family="Arial, sans-serif" font-size="15" fill="#d9e1f2">Also holds on its own (not on the shape's lines)</text>
-<polygon points="36.7,242.6 36.7,257.4 24.0,264.7 11.3,257.4 11.3,242.6 24.0,235.3" fill="#1b2233"/>
-<polygon points="33.1,244.7 33.1,255.3 24.0,260.6 14.9,255.3 14.9,244.7 24.0,239.4" fill="none" stroke="#87d1f7" stroke-width="2.5"/>
-<text x="50" y="255" font-family="Arial, sans-serif" font-size="15" fill="#d9e1f2">Ringed: cells the defence rule uses</text>
-<polygon points="36.7,280.6 36.7,295.4 24.0,302.7 11.3,295.4 11.3,280.6 24.0,273.3" fill="#1b2233"/>
-<line x1="10" y1="288" x2="38" y2="288" stroke="#ffffff" stroke-width="3"/>
-<polygon points="37.6,280.2 37.6,295.8 24.0,303.7 10.4,295.8 10.4,280.2 24.0,272.3" fill="none" stroke="#ff8a3d" stroke-width="2"/>
-<text x="50" y="293" font-family="Arial, sans-serif" font-size="15" fill="#d9e1f2">A four or six (white; dashed: a three), a window of six (orange)</text>
+<line x1="10" y1="212" x2="38" y2="212" stroke="#ffffff" stroke-width="3"/>
+<polygon points="37.6,204.2 37.6,219.8 24.0,227.7 10.4,219.8 10.4,204.2 24.0,196.3" fill="none" stroke="#ff8a3d" stroke-width="2"/>
+<text x="50" y="217" font-family="Arial, sans-serif" font-size="15" fill="#d9e1f2">A four or six (white; dashed: a three), a window of six (orange)</text>
 </svg>

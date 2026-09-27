@@ -51,6 +51,8 @@ add_executable(sixbench tools/bench.cpp)
 target_link_libraries(sixbench PRIVATE sixcore)
 add_executable(sixshapes tools/shapes.cpp)
 target_link_libraries(sixshapes PRIVATE sixcore)
+add_executable(sixmine tools/mine.cpp)
+target_link_libraries(sixmine PRIVATE sixcore)
 add_executable(sixnnue tools/nnue_eval.cpp)
 target_link_libraries(sixnnue PRIVATE sixcore)
 

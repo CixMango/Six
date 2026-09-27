@@ -43,6 +43,8 @@ struct Options {
   int fastSampled = 4;
   int maxStones = 300;
   std::uint64_t seed = 0;
+  std::int64_t rootThreatNodes = 2'000;
+  bool rootThreatWide = false;
   bool cpu = false;
   bool tensorRt = false;
 };
@@ -67,6 +69,8 @@ Options parse(int argc, char** argv) {
     else if (a == "--fast-sampled") o.fastSampled = std::stoi(next());
     else if (a == "--max-stones") o.maxStones = std::stoi(next());
     else if (a == "--seed") o.seed = std::stoull(next());
+    else if (a == "--root-threat-nodes") o.rootThreatNodes = std::stoll(next());
+    else if (a == "--root-threat-wide") o.rootThreatWide = std::stoi(next()) != 0;
     else if (a == "--cpu") o.cpu = true;
     else if (a == "--trt") o.tensorRt = true;
     else throw std::invalid_argument("unknown option " + a);
@@ -130,9 +134,11 @@ int main(int argc, char** argv) {
 
   const auto worker = [&](int index) {
     std::mt19937_64 rng(options.seed * 1000003ULL + static_cast<std::uint64_t>(index));
-    six::Mcts mcts(batching, 2);  // 2 MB solver table per thread: its searches are at most 2,000 nodes
+    // Solver tables per thread sized to the root search's budget (2 MB covers 2,000 nodes).
+    six::Mcts mcts(batching, options.rootThreatNodes > 2'000 ? 8 : 2);
     mcts.params().batch = 8;
-    mcts.params().rootThreatNodes = 2'000;
+    mcts.params().rootThreatNodes = options.rootThreatNodes;
+    mcts.params().rootThreatWide = options.rootThreatWide;
     mcts.params().leafThreatNodes = 32;
     mcts.params().cacheEntries = 1 << 13;  // per thread; mostly transpositions within one stone's search
     std::ofstream sink(std::filesystem::path(options.out) / ("games-" + std::to_string(index) + ".jsonl"), std::ios::app);

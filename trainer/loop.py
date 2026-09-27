@@ -214,7 +214,9 @@ def play_generation(g: int, config: dict) -> dict:
                              "--full", str(config["full"]), "--fast", str(config["fast"]),
                              "--full-share", str(config["fullShare"]), "--sampled", str(config["sampled"]),
                              "--fast-sampled", str(config["fastSampled"]), "--max-stones", str(config["maxStones"]),
-                             "--seed", str(int(time.time()) * 100 + g), *(["--trt"] if use_tensorrt(config) else [])],
+                             "--seed", str(int(time.time()) * 100 + g), *(["--trt"] if use_tensorrt(config) else []),
+                             *(["--root-threat-nodes", str(config["rootThreatNodes"])] if "rootThreatNodes" in config else []),
+                             *(["--root-threat-wide", "1"] if config.get("rootThreatWide") else [])],
                             f"selfplay {g}", env_with_cuda(), release_after=RELEASE_AFTER_SECONDS)
         if code == PAUSED_EXIT:
             continue  # play the missing games once the pause ends

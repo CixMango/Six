@@ -180,6 +180,8 @@ def deep(a):
             r = json.loads(line)
             if r["result"] == "proven":
                 earlier[canonical([tuple(c) for c in r["shape"]])] = r
+    # Known proofs count from the start, so a bigger shape in another part can be settled by containing one.
+    proven |= set(earlier)
     if out_path.exists():
         for line in open(out_path, encoding="utf-8"):
             r = json.loads(line)
@@ -195,12 +197,23 @@ def deep(a):
                 proven.add(canonical([tuple(c) for c in r["shape"]]))
     six = Engine(a)
     out = open(out_path, "a", encoding="utf-8")
+    seen_at = out_path.stat().st_size
     try:
         for i, r in enumerate(todo, 1):
+            # Proofs the other parts wrote since the last shape count too (they share the output file).
+            with open(out_path, "rb") as f:
+                f.seek(seen_at)
+                new = f.read()
+            new = new[:new.rfind(b"\n") + 1]
+            seen_at += len(new)
+            for line in new.decode("utf-8").splitlines():
+                o = json.loads(line)
+                if o["result"] in ("proven", "contains"):
+                    proven.add(canonical([tuple(c) for c in o["shape"]]))
             shape = [tuple(c) for c in r["shape"]]
             rating = r.get("six_defender") or 0
-            budget = a.shape_seconds if rating <= -800 else min(a.shape_seconds, 420 if rating <= -500 else 300 if rating < 0
-                                                                else 180)
+            # The likelier the proof (Six sees the defender as losing), the more time it gets.
+            budget = a.shape_seconds if rating <= -500 else round(a.shape_seconds * (0.625 if rating < 0 else 0.375))
             if a.quick:
                 budget = min(budget, a.quick)
             k = canonical(shape)

@@ -106,6 +106,10 @@ def describe(shape):
     """A plain name for three-stone shapes, and community names where they exist."""
     s = [tuple(c) for c in shape]
     if len(s) == 3:
+        if len(shape_lines(s)) == 1 and all(on_axis(a, b) for a, b in combinations(s, 2)):
+            line = sorted(s)
+            gaps = sorted(dist(x, y) for x, y in zip(line, line[1:]))
+            return "Three in a row" if gaps == [1, 1] else f"Line {gaps[0]}+{gaps[1]}"
         bend = arms(s)
         if bend:
             a, b, angle = bend
@@ -113,7 +117,7 @@ def describe(shape):
         a, b = next((a, b) for i, a in enumerate(s) for b in s[i + 1:] if on_axis(a, b))
         third = next(c for c in s if c not in (a, b))
         near, far = sorted((dist(third, a), dist(third, b)))
-        return ("Pair" if dist(a, b) == 1 else "Split pair" if dist(a, b) == 2 else "Wide pair") + f" + 1 ({near},{far})"
+        return ("Pair" if dist(a, b) == 1 else "One-gap pair" if dist(a, b) == 2 else "Two-gap pair") + f" + 1 ({near},{far})"
     if len(s) == 4:
         d = sorted(dist(a, b) for i, a in enumerate(s) for b in s[i + 1:])
         if d == [1, 1, 1, 1, 1, 2]:
@@ -136,8 +140,14 @@ def arms(s):
 
 
 def shape_lines(s):
-    """The lines through two of the shape's stones."""
-    return [(a, b) for i, a in enumerate(s) for b in s[i + 1:] if on_axis(a, b)]
+    """The lines through two or more of the shape's stones, each given by its two outermost stones."""
+    lines = {}
+    for i, a in enumerate(s):
+        for b in s[i + 1:]:
+            if on_axis(a, b):
+                ident = ("q", a[0]) if a[0] == b[0] else ("r", a[1]) if a[1] == b[1] else ("s", a[0] + a[1])
+                lines.setdefault(ident, set()).update((tuple(a), tuple(b)))
+    return [(min(v), max(v)) for v in lines.values()]
 
 
 def lines_through(c, s):
@@ -276,16 +286,16 @@ def legend(main=False):
             ("heat", "Defence map: bluer = used by more holding replies"),
             ("alone", "Holds on its own, whatever the second stone does"),
             ("offline", "Also holds on its own (not on the shape's lines)"),
-            ("ring", "Ringed: cells the defence rule uses"),
+            ("ring", "Ringed: the cells or stones the text points to"),
             ("number", "Worked examples: stones numbered by turn"),
             ("line", "A four or six (white; dashed: a three), a window of six (orange)"),
             ("guide", "A shape's lines (blue)"),
             ("add", "Add here: two stones that make a pair unstoppable"),
-            ("inner", "A tight three inside a bigger shape")]
+            ("inner", "A two-stone three inside a bigger shape")]
     if main:
         rows = [r for r in rows if r[0] not in ("heat", "inner", "offline")]
     else:
-        rows = [r for r in rows if r[0] not in ("add", "inner", "number", "guide")]
+        rows = [r for r in rows if r[0] not in ("add", "inner", "number", "guide", "offline", "ring")]
     step = 38
     w = 520
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {len(rows) * step + 8}" width="{w}" height="{len(rows) * step + 8}">',
@@ -391,6 +401,8 @@ def name_file(shape, suffix=""):
 
 def pct(a, b):
     p = 100 * a / b
+    if 0 < p < 0.1:
+        return "under 0.1%"
     return f"{p:.1f}%" if p < 10 else f"{p:.0f}%"
 
 
@@ -552,7 +564,7 @@ def completions(pair, targets):
 
 NAME_STRIP = [([(0, 0), (0, 1), (1, 0)], "Triangle 1+1"), ([(0, 0), (0, 1), (3, 0)], "Triangle 1+3"),
               ([(0, 0), (0, 1), (1, -1)], "Chevron 1+1"), ([(0, 0), (0, 1), (2, -2)], "Chevron 1+2"),
-              ([(0, 0), (0, 1), (1, -2)], "Pair + 1 (2,3)")]
+              ([(0, 0), (0, 1), (1, -2)], "Pair + 1 (2,3)"), ([(0, 0), (0, 1), (0, 3)], "Line 1+2")]
 
 
 def nonforced_results(survey_path, deep_path):
@@ -571,7 +583,27 @@ def nonforced_results(survey_path, deep_path):
             merged = dict(old or {})
             merged.update(r)
             results[k] = merged
+    # A shape holding a proven one is proven too (your own extra stones never hurt), even when the survey process that
+    # tried it didn't know the smaller proof yet.
+    won = {k for k, r in results.items() if r["result"] in ("forced", "proven", "contains")}
+    for k, r in sorted(results.items(), key=lambda kr: len(kr[1]["shape"])):
+        if r["result"] != "open":
+            continue
+        shape = [tuple(c) for c in r["shape"]]
+        inside = next((t for n in range(2, len(shape)) for t in combinations(shape, n) if canonical(list(t)) in won), None)
+        if inside:
+            r.update(result="contains", inside=[list(c) for c in inside])
+            won.add(k)
     return results
+
+
+def open_reason(r):
+    """Why a proof didn't settle an open shape: too many defences left, the time limit, a defence that held against
+    every turn Six suggested, or no proof tried."""
+    proof = r.get("proof")
+    if isinstance(proof, dict) and "too_big" in proof:
+        return "time" if str(proof["too_big"]).startswith("out of time") else "replies"
+    return "held" if proof else "untried"
 
 
 def owner_chance(r):
@@ -589,83 +621,78 @@ def natural_branch(proof, shape):
     return [tuple(c) for c in best["O"]], [tuple(c) for c in best["then"]["X"]]
 
 
-def nonforced_section(results, labels_for):
-    """Main-page section and catalogue section for non-forced wins."""
+def quiet_branch(proof, shape):
+    """The most natural defence (closest to the shape) that the owner answers with a quiet turn, one making no four;
+    the most natural defence of all if every answer is a four. Returns the defence, the answer and whether it's quiet."""
+    branches = [b for b in proof.get("survive") or [] if "X" in b.get("then", {})]
+    quiet = [b for b in branches
+             if not open_fours(set(shape) | {tuple(c) for c in b["then"]["X"]}, {tuple(c) for c in b["O"]})]
+    pool = quiet or branches
+    if not pool:
+        return None, None, False, False
+    best = min(pool, key=lambda b: (sum(min(dist(tuple(c), x) for x in shape) for c in b["O"]), b["O"]))
+    after = best["then"].get("then", {})
+    # Settled: after the answer, no defender reply stops a win by double threats.
+    settled = "survive" in after and not after["survive"]
+    return [tuple(c) for c in best["O"]], [tuple(c) for c in best["then"]["X"]], bool(quiet), settled
+
+
+def unified_unstoppable(forced_rows, results):
+    """Every shape that wins with the defender moving first: the double-threat ones, the ones proven with a quiet
+    move, and the ones containing either. Smallest and most compact first."""
+    out, seen = [], set()
+    for r in forced_rows:
+        k = canonical([tuple(c) for c in r["shape"]])
+        seen.add(k)
+        out.append({"shape": r["shape"], "stones": len(r["shape"]), "kind": "double"})
+    for k, r in results.items():
+        if k in seen or r["result"] not in ("forced", "proven", "contains"):
+            continue
+        kind = {"forced": "double", "proven": "quiet", "contains": "contains"}[r["result"]]
+        out.append({"shape": r["shape"], "stones": len(r["shape"]), "kind": kind, "proof": r.get("proof"),
+                    "inside": r.get("inside")})
+    spread = lambda e: sum(dist(tuple(a), tuple(b)) for a, b in combinations(e["shape"], 2))
+    return sorted(out, key=lambda e: (e["stones"], e["kind"] == "contains", spread(e), e["shape"]))
+
+
+def nonforced_section(results):
+    """The catalogue's list of shapes no proof settled with the defender moving first."""
     by = defaultdict(lambda: defaultdict(list))
     for k, r in results.items():
         by[r["stones"]][r["result"]].append(r)
-    proven = [r for r in results.values() if r["result"] == "proven"]
-    solved = {k for k, r in results.items() if r["result"] in ("forced", "proven")}
 
-    def minimal(r):
-        shape = [tuple(c) for c in r["shape"]]
-        return not any(canonical(list(t)) in solved for n in range(2, len(shape)) for t in combinations(shape, n))
-
-    shown = sorted((r for r in proven if minimal(r)), key=lambda r: (r["stones"], r["shape"]))
-    main = ["## Non-forced wins", "",
-            "Everything above counts only **forced wins**: every attacking turn is a double threat that takes both of the "
-            "defender's stones. A **non-forced win** also allows turns that aren't, a quiet move or a single threat, "
-            "as long as the attacker still wins whatever the defender does. Six's solver checked every shape of 2, 3 and "
-            "4 stones with **the defender moving first**, allowing up to five of the attacker's turns: Six suggests the "
-            "attacker's turn and every defender reply is checked.", "",
-            "| Stones | Shapes | Unstoppable by double threats | Proven with non-forced turns | Contain one of those | "
-            "Not proven |", "|---|---|---|---|---|---|"]
+    phrases = {"replies": "too many defences survived to check them all", "time": "the proof ran out of time",
+               "held": "a defence held against every turn Six suggested (within five turns)", "untried": "no proof was tried"}
+    seen = {open_reason(r) for r in results.values() if r["result"] == "open"}
+    cat = ["## Not proven", "",
+           "Every shape of 2 to 4 stones that no proof settled with the defender moving first. Under each: Six's "
+           "estimate of the owner's chance, and why there's no proof: "
+           + "; ".join(phrases[k] for k in ("replies", "time", "held", "untried") if k in seen) + ".", ""]
     for n in sorted(by):
-        c = by[n]
-        total = sum(len(v) for v in c.values())
-        main.append(f"| {n} | {total} | {len(c['forced'])} | {len(c['proven'])} | {len(c['contains'])} | {len(c['open'])} |")
-    main += ["",
-             "**Open space favours the attacker far more than double threats show.** Three in a row, which has no forced "
-             "win even when its owner moves first, is a proven win even when the defender moves first: the attacker "
-             "answers any reply with one quiet turn that makes an unstoppable shape. Real games are crowded, which is "
-             "why this rarely decides them outright; keep the fight where your stones are.", "",
-             f"The {len(shown)} proven shapes that don't contain a smaller proven one, each with a natural defence (blue) and "
-             "the attacker's answer (outlined):", "", "<table>"]
-    cells = []
-    for i, r in enumerate(shown, 1):
-        shape = [tuple(c) for c in r["shape"]]
-        reply, answer = natural_branch(r.get("proof") or {}, shape)
-        fname = name_file(shape, "_nf")
-        (OUT / fname).write_text(svg(shape, defense=reply or (), first=answer or (), margin=1), encoding="utf-8")
-        named = describe(shape) if len(shape) <= 3 else ""
-        cells.append(f'<td align="center"><img src="shapes/{fname}" alt="N{i}"><br><b>N{i}</b>'
-                     + (f" · {named}" if named else "") + "</td>")
-    for i in range(0, len(cells), 4):
-        main.append("<tr>" + "".join(cells[i:i + 4]) + "</tr>")
-    main += ["</table>", "",
-             "\"Not proven\" doesn't mean defendable: proving a defence would mean solving the game around the shape. "
-             "Most of those shapes need a longer quiet plan than the five turns checked. The "
-             "[catalogue](shapes-catalog.md#non-forced-results) lists each with Six's estimate of the owner's chances.", ""]
-
-    cat = ["## Non-forced results", "",
-           "Every shape of 2 to 4 stones with the defender moving first. \"Owner's chance\" is Six's estimate for the "
-           "shapes no proof settled.", ""]
-    for n in sorted(by):
-        c = by[n]
-        cat += [f"### {n} stones", ""]
-        if c["proven"] or c["contains"]:
-            cat += [f"Proven with non-forced turns: {len(c['proven'])}; contain a proven shape: {len(c['contains'])}.", ""]
-        rest = sorted(c["open"], key=lambda r: -(owner_chance(r) or 0))
+        rest = sorted(by[n]["open"], key=lambda r: -(owner_chance(r) or 0))
         if rest:
-            cat += ["<details><summary>Not proven, by Six's estimate of the owner's chance</summary>", "", "<table>"]
+            cat += [f"### {n} stones", "",
+                    "<details><summary>Not proven, by Six's estimate of the owner's chance</summary>", "", "<table>"]
             row = []
             for r in rest:
                 shape = [tuple(x) for x in r["shape"]]
                 fname = name_file(shape, "_open")
                 (OUT / fname).write_text(svg(shape, margin=1), encoding="utf-8")
                 ch = owner_chance(r)
+                reason = {"replies": "too many defences", "time": "out of time", "held": "a defence held",
+                          "untried": "not tried"}[open_reason(r)]
                 row.append(f'<td align="center"><img src="shapes/{fname}" alt="shape"><br><sub>'
-                           + (f"owner {ch:.0%}" if ch is not None else "not rated") + "</sub></td>")
+                           + (f"owner {ch:.0%}" if ch is not None else "not rated") + f"<br>{reason}</sub></td>")
                 if len(row) == 6:
                     cat.append("<tr>" + "".join(row) + "</tr>")
                     row = []
             if row:
                 cat.append("<tr>" + "".join(row) + "</tr>")
             cat += ["</table>", "", "</details>", ""]
-    return main, cat
+    return cat
 
 
-def quiz(tight, loose, fours, labels, refutes, reach, rows, cells_of, needed, unstop_shapes=()):
+def quiz(tight, loose, fours, labels, refutes, reach, rows, cells_of, needed, u_canon=None, inside=None):
     """Five questions: three 'which reply holds', one 'which three is must-answer', one 'which pair can't grow'."""
     out = ["## Test yourself", "", "The answer is folded under each question.", ""]
 
@@ -681,8 +708,8 @@ def quiz(tight, loose, fours, labels, refutes, reach, rows, cells_of, needed, un
     too_far = [p for p in combinations(sorted(region(shape, 3)), 2)
                if two_lines(p, shape) and max(min(dist(c, x) for x in shape) for c in p) == 3]
     cases.append((chevron, rule_pairs(shape)[0], pick(shape, sorted(too_far, key=lambda pr: sum(min(dist(c, x) for x in shape) for c in pr)), holding) or pick(shape, same_line, holding),
-                  "one stone on each of two of its lines, both within 2 cells. The other reply looks the same, but one "
-                  "stone is 3 cells out, too far to stop the fours"))
+                  "one stone on each of two of its lines, both within 2 cells, and every such pair holds. The other "
+                  "reply looks the same, but one stone is 3 cells out: some pairs like that hold, this one doesn't"))
     for r in loose:
         shape = cells_of(r)
         alone = defence_stats(shape, r["defenses"], 3)[1]
@@ -706,7 +733,9 @@ def quiz(tight, loose, fours, labels, refutes, reach, rows, cells_of, needed, un
     clean = min(sorted(holding), key=lambda pr: sum(min(dist(c, x) for x in shape) for c in pr))
     cases.append((solid, clean, pick(shape, one_end, holding),
                   f"a solid four needs a stone at each end; it's one of only {len(holding)} replies that hold. Two stones "
-                  "at one end leave the other end open"))
+                  "at one end leave the other end open"
+                  + (f". In open space it still wins later, since it contains {inside(shape)}: the block only stops the six"
+                     if inside and inside(shape) else "")))
 
     for n, (r, good, wrong, why) in enumerate(cases, 1):
         shape = cells_of(r)
@@ -730,50 +759,53 @@ def quiz(tight, loose, fours, labels, refutes, reach, rows, cells_of, needed, un
                        (f"After the other reply, X wins starting here (outlined), with six on turn {x_turns}."
                         if (x_turns := sum(1 for t in refute['turns'] if t['player'] == 'X')) > 1 else
                         "After the other reply, X makes six right away (outlined).")
-                       + (" The ringed stone is the one that's too far out." if far else "")]
+                       + (" The ringed stone is the one 3 cells out." if far else "")]
         else:
             needed.append(" ".join(f"{q} {r2}" for q, r2 in list(wrong) + shape))
         out += [f"**{n}. {label} · {name}: which reply holds?**", "", "<table><tr>" + "".join(cells) + "</tr></table>", "",
                 "<details><summary>Answer</summary>", ""] + answer + ["", "</details>", ""]
 
-    # which three must be answered?
-    straight = next(r for r in rows if r["stones"] == 3 and r["shape"] == [[0, 0], [0, 1], [0, 2]])
+    # which three must be answered? A three on one line that's too spread out, against the triangle 1+3
+    spread = next((r for r in rows if r["stones"] == 3 and not r["toMove"]["win"]
+                   and canonical(cells_of(r)) == canonical([(0, 0), (0, 2), (0, 4)])), None)
+    spread = spread or next(r for r in rows if r["stones"] == 3 and not r["toMove"]["win"] and len(shape_lines(cells_of(r))) == 1)
     triangle = next(r for r in tight if describe(cells_of(r)) == "Triangle 1+3")
     cells = []
-    for tag, r in (("A", straight), ("B", triangle)):
+    for tag, r in (("A", spread), ("B", triangle)):
         fname = name_file(cells_of(r), f"_quiz{tag}")
         (OUT / fname).write_text(svg(cells_of(r), margin=1), encoding="utf-8")
         cells.append(f'<td align="center"><img src="shapes/{fname}" alt="Shape {tag}"><br><b>{tag}</b></td>')
     out += [f"**{len(cases) + 1}. Which one needs the cheat-sheet reply right now?**", "",
             "<table><tr>" + "".join(cells) + "</tr></table>", "",
             "<details><summary>Answer</summary>", "",
-            f"**B**, the triangle 1+3 ({labels[canonical(cells_of(triangle))]}): its owner wins by threats alone if you "
-            "don't. Three in a row has no such win; treat it as close pairs: take the ringed cells of its most dangerous "
-            "pair (neighbours first).", "",
+            f"**B**, the triangle 1+3 ({labels[canonical(cells_of(triangle))]}): its owner has a forced win if you "
+            f"don't. The {describe(cells_of(spread)).lower()} (A) has no forced win yet. Treat it as close pairs: take the "
+            "ringed cells of its most dangerous pair (neighbours or a one-gap pair first, as in step 6).", "",
             f'<img src="shapes/{name_file(cells_of(triangle), "_quizfix")}" alt="The reply for B">', "",
             "The cheat-sheet reply for B: one stone on each of two of its lines.", "",
             "</details>", ""]
     (OUT / name_file(cells_of(triangle), "_quizfix")).write_text(
         svg(cells_of(triangle), defense=rule_pairs(cells_of(triangle))[0], margin=1), encoding="utf-8")
 
-    # which pair can't grow?
-    grows = {canonical(p): g for p, g in reach}
-    one_gap, three_gap = [(0, 0), (0, 2)], [(0, 0), (0, 4)]
-    cells = []
-    for tag, p in (("A", one_gap), ("B", three_gap)):
-        fname = name_file(p, f"_quiz{tag}")
-        (OUT / fname).write_text(svg(p, margin=1, frame=[(0, -1), (0, 5)]), encoding="utf-8")
-        cells.append(f'<td align="center"><img src="shapes/{fname}" alt="Pair {tag}"><br><b>{tag}</b></td>')
-    if grows.get(canonical(one_gap)) and not grows.get(canonical(three_gap)):
-        out += [f"**{len(cases) + 2}. Left alone in open space, which pair can't become an unstoppable shape?**", "",
-                "<table><tr>" + "".join(cells) + "</tr></table>", "",
+    # which one is proven unstoppable? Three in a row, against a must-answer three nobody proved unstoppable
+    u_canon = u_canon or {}
+    row3 = [(0, 0), (0, 1), (0, 2)]
+    open_tight = [cells_of(r) for r in tight if canonical(cells_of(r)) not in u_canon]
+    other = next((sh for sh in open_tight if describe(sh) == "Triangle 1+1"), open_tight[0] if open_tight else None)
+    if canonical(row3) in u_canon and other:
+        cells = []
+        for tag, shape in (("A", other), ("B", row3)):
+            fname = name_file(shape, f"_quiz{tag}")
+            (OUT / fname).write_text(svg(shape, margin=1, frame=[(0, -1), (0, 3), (1, 0)]), encoding="utf-8")
+            cells.append(f'<td align="center"><img src="shapes/{fname}" alt="Shape {tag}"><br><b>{tag}</b></td>')
+        out += [f"**{len(cases) + 2}. You move first. Which one is proven to win for its owner anyway, in open space?**",
+                "", "<table><tr>" + "".join(cells) + "</tr></table>", "",
                 "<details><summary>Answer</summary>", "",
-                "**B**: stones 4 apart on a line aren't a close pair, and they never become an unstoppable shape. The "
-                "one-gap pair (A) becomes one with two more stones (+):", "",
-                f'<img src="shapes/{name_file(one_gap, "_quizgrow")}" alt="A grows">', "", "</details>", ""]
-        target = next(u for u in unstop_shapes if completion(one_gap, u))
-        (OUT / name_file(one_gap, "_quizgrow")).write_text(svg(one_gap, add=completion(one_gap, target), margin=1),
-                                                          encoding="utf-8")
+                f"**B**, three in a row ({u_canon[canonical(row3)]}): whatever two stones you place within 5 cells, its "
+                f"owner still wins (see [Unstoppable shapes](#unstoppable-shapes)). The {describe(other).lower()} (A) is "
+                "must-answer, but the two-lines defence stops its forced win, and no non-forced win was proven.",
+                "", f'<img src="shapes/{name_file(row3, "_nf")}" alt="Three in a row, a defence and the answer">', "",
+                "</details>", ""]
     return out
 
 
@@ -897,7 +929,7 @@ def worked_example(line, label, name):
     shape = [tuple(c) for c in line["shape"]]
     frames, numbered, key_move, xturn = narrate(shape, line["turns"])
     lesson = (f" The key move is X{key_move}: its four also lines up three stones on a second line, which becomes part "
-              f"of the unstoppable threats on turn {xturn - 1}." if key_move else "")
+              f"of the unblockable threats on turn {xturn - 1}." if key_move else "")
     return ([f"### How the {name} wins ({label})", "",
              '<img src="shapes/directions.svg" alt="The three line directions">', "",
              turn_grid(shape, frames, numbered, "_line"), "",
@@ -1019,9 +1051,10 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
             return f"{labels[0]}–{labels[-1]}" if len(labels) > 1 else labels[0]
         return ", ".join(labels)
     two_line = [a_label[canonical(cells_of(r))] for r in threes if rule_pairs(cells_of(r))]
-    fours = [r for r in rows if r["stones"] == 4 and r["toMove"]["win"] and minimal(r) and not unstoppable(r)]
-    in_window = hardest([r for r in fours if r["toMove"]["turns"] == 0])
-    others = hardest([r for r in fours if r["toMove"]["turns"] > 0])
+    # Every four (four stones in one window: six next turn), and the minimal 4-stone must-answer shapes besides.
+    in_window = hardest([r for r in rows if r["stones"] == 4 and r["toMove"]["win"] and r["toMove"]["turns"] == 0])
+    others = hardest([r for r in rows if r["stones"] == 4 and r["toMove"]["win"] and r["toMove"]["turns"] > 0
+                      and minimal(r) and not unstoppable(r)])
     others = [r for r in others if most_in_window(r) == 3] + [r for r in others if most_in_window(r) < 3]
     unstop = sorted((r for r in rows if unstoppable(r) and (not confirmed or key(cells_of(r)) in confirmed)),
                     key=lambda r: (sum(dist(a, b) for a, b in combinations(cells_of(r), 2)), r["shape"]))
@@ -1037,26 +1070,234 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
     turns3 = {r["toMove"]["turns"] for r in threes}
 
     needed = []
+    cut_shares = []
+    # 4-stone shapes holding a must-answer three (not fours, not unstoppable), and how often the cheat-sheet reply for a
+    # two-stone three inside one still holds
+    clusters = [r for r in rows if r["stones"] == 4 and r["toMove"]["win"] and r["toMove"]["turns"] > 0
+                and not minimal(r) and r["defenses"]["holding"]]
+    tight_keys = {canonical(cells_of(r)) for r in tight}
+    inside_tried = inside_held = 0
+    # The same replies split by whether a stone sits on a line of the cluster that runs through its fourth stone.
+    through = {True: [0, 0], False: [0, 0]}
+
+    def on_segment(c, a, b):
+        return c in (a, b) or (on_axis(a, c) and on_axis(b, c) and dist(a, c) + dist(c, b) == dist(a, b))
+
+    for r in clusters:
+        shape = cells_of(r)
+        hold = {tuple(sorted(tuple(c) for c in pr)) for pr in r["defenses"]["holding"]}
+        cluster_lines = shape_lines(shape)
+        for t in combinations(shape, 3):
+            if canonical(list(t)) not in tight_keys:
+                continue
+            fourth = next(c for c in shape if c not in t)
+            via = {k for k, (a, b) in enumerate(cluster_lines) if on_segment(fourth, a, b)}
+            for pr in rule_pairs(list(t)):
+                pr = tuple(sorted(pr))
+                if pr[0] not in shape and pr[1] not in shape:
+                    inside_tried += 1
+                    inside_held += pr in hold
+                    hit = any(k in via for c in pr for k, _ in lines_through(c, shape))
+                    through[hit][0] += 1
+                    through[hit][1] += pr in hold
+    inside_pct = round(100 * inside_held / inside_tried) if inside_tried else 0
+    through_pct = {k: round(100 * h / n) if n else 0 for k, (n, h) in through.items()}
+    # The quick rule as the page states it: one stone on a line joining the fourth stone to another of the shape's
+    # stones, within 2 cells of the fourth stone. How often it holds, in how many shapes it can be used, and an example.
+    def joins_fourth(c, fourth, shape):
+        if c in shape or dist(c, fourth) > 2 or not on_axis(c, fourth):
+            return False
+        dq, dr = c[0] - fourth[0], c[1] - fourth[1]
+        return any(o != fourth and on_axis(o, fourth) and (o[0] - fourth[0]) * dr == (o[1] - fourth[1]) * dq for o in shape)
+
+    quick = [0, 0]
+    usable = total_tight = 0
+    quick_example = None
+    for r in clusters:
+        shape = cells_of(r)
+        hold = {tuple(sorted(tuple(c) for c in pr)) for pr in r["defenses"]["holding"]}
+        can = has = False
+        for t in combinations(shape, 3):
+            if canonical(list(t)) not in tight_keys:
+                continue
+            has = True
+            fourth = next(c for c in shape if c not in t)
+            for pr in rule_pairs(list(t)):
+                pr = tuple(sorted(pr))
+                if pr[0] in shape or pr[1] in shape or not any(joins_fourth(c, fourth, shape) for c in pr):
+                    continue
+                quick[0] += 1
+                quick[1] += pr in hold
+                can = True
+                if pr in hold and quick_example is None and describe(list(t)).startswith("Triangle 1+1"):
+                    quick_example = (shape, fourth, pr)
+        total_tight += has
+        usable += can
+    # A one-stone three inside a four-stone shape: do its dotted cells still hold on their own, and with a second stone
+    # placed like the quick rule's?
+    single = [0, 0]
+    paired = [0, 0]
+    anywhere = [0, 0]
+    loose_rows = {canonical(cells_of(r)): r for r in loose}
+    for r in clusters:
+        shape = cells_of(r)
+        hold = {tuple(sorted(tuple(c) for c in pr)) for pr in r["defenses"]["holding"]}
+        cluster_alone = set(defence_stats(shape, r["defenses"], 3)[1])
+        for t in combinations(shape, 3):
+            inner = loose_rows.get(canonical(list(t)))
+            if not inner:
+                continue
+            fourth = next(c for c in shape if c not in t)
+            near = [c for c in region(shape, 2) if joins_fourth(c, fourth, shape)]
+            # the inner three's cells, mapped onto this copy of it
+            for f in TRANSFORMS:
+                img = [f(c) for c in cells_of(inner)]
+                shift = (min(t)[0] - min(img)[0], min(t)[1] - min(img)[1])
+                if sorted((c[0] + shift[0], c[1] + shift[1]) for c in img) == sorted(t):
+                    for c in defence_stats(cells_of(inner), inner["defenses"], 3)[1]:
+                        cell = (f(c)[0] + shift[0], f(c)[1] + shift[1])
+                        if cell in shape:
+                            continue
+                        single[0] += 1
+                        single[1] += cell in cluster_alone
+                        for d in near:
+                            if d != cell:
+                                paired[0] += 1
+                                paired[1] += tuple(sorted((cell, d))) in hold
+                        for d in region(shape, 3):
+                            if d != cell and d not in shape:
+                                anywhere[0] += 1
+                                anywhere[1] += tuple(sorted((cell, d))) in hold
+                    break
+    single_pct = round(100 * single[1] / single[0]) if single[0] else 0
+    paired_pct = round(100 * paired[1] / paired[0]) if paired[0] else 0
+    anywhere_pct = round(100 * anywhere[1] / anywhere[0]) if anywhere[0] else 0
+
+    spread_out = [r for r in others if most_in_window(r) < 3]
+    two_pairs = len(spread_out)
+    plus_patterns = len([r for r in others if most_in_window(r) == 3])
+    ring_for = {}
+    for pair, grows in reach:
+        if grows:
+            ways = completions(pair, [cells_of(u) for u in unstop])
+            ring_for[canonical(pair)] = (pair, max(combinations(sorted({c for w in ways for c in w}), 2),
+                                                   key=lambda ab: (sum(1 for w in ways if ab[0] in w or ab[1] in w), ab)))
+
+    def ringed_holds(r):
+        """Some close pair of the shape, answered with its ringed cells (in either orientation), holds."""
+        shape = cells_of(r)
+        hold = {tuple(sorted(tuple(c) for c in pr)) for pr in r["defenses"]["holding"]}
+        for a, b in combinations(shape, 2):
+            entry = ring_for.get(canonical([a, b]))
+            if not entry:
+                continue
+            base, ring = entry
+            for f in TRANSFORMS:
+                img = [f(c) for c in base]
+                for x, y in ((a, b), (b, a)):
+                    shift = (x[0] - img[0][0], x[1] - img[0][1])
+                    if (img[1][0] + shift[0], img[1][1] + shift[1]) == y:
+                        mapped = tuple(sorted((f(c)[0] + shift[0], f(c)[1] + shift[1]) for c in ring))
+                        if mapped in hold:
+                            return True
+        return False
+
+    spread_ok = sum(ringed_holds(r) for r in spread_out)
+    spread_pairs = spread_pairs_ok = 0
+    for r in spread_out:
+        shape = cells_of(r)
+        hold = {tuple(sorted(tuple(c) for c in pr)) for pr in r["defenses"]["holding"]}
+        for a, b in combinations(shape, 2):
+            entry = ring_for.get(canonical([a, b]))
+            if not entry:
+                continue
+            spread_pairs += 1
+            base, ring = entry
+            works = False
+            for f in TRANSFORMS:
+                img = [f(c) for c in base]
+                for x, y in ((a, b), (b, a)):
+                    shift = (x[0] - img[0][0], x[1] - img[0][1])
+                    if (img[1][0] + shift[0], img[1][1] + shift[1]) == y:
+                        works |= tuple(sorted((f(c)[0] + shift[0], f(c)[1] + shift[1]) for c in ring)) in hold
+            spread_pairs_ok += works
+    closest_ok = 0
+    for r in spread_out:
+        shape = cells_of(r)
+        hold = {tuple(sorted(tuple(c) for c in pr)) for pr in r["defenses"]["holding"]}
+        close = [(a, b) for a, b in combinations(shape, 2) if canonical([a, b]) in ring_for]
+        if not close:
+            continue
+        a, b = min(close, key=lambda ab: (dist(*ab), on_axis(*ab), ab))
+        base, ring = ring_for[canonical([a, b])]
+        works = False
+        for f in TRANSFORMS:
+            img = [f(c) for c in base]
+            for x, y in ((a, b), (b, a)):
+                shift = (x[0] - img[0][0], x[1] - img[0][1])
+                if (img[1][0] + shift[0], img[1][1] + shift[1]) == y:
+                    works |= tuple(sorted((f(c)[0] + shift[0], f(c)[1] + shift[1]) for c in ring)) in hold
+        closest_ok += works
+    minimal_one_stone = sum(1 for r in others if defence_stats(cells_of(r), r["defenses"], 3)[1])
+    unholdable4 = sum(1 for r in rows if r["stones"] == 4 and unstoppable(r))
+    wins3 = {canonical(cells_of(r)) for r in rows if r["stones"] == 3 and r["toMove"]["win"]}
+    plus_all = [r for r in rows if r["stones"] == 4 and most_in_window(r) == 3
+                and not any(canonical(list(t)) in wins3 for t in combinations(cells_of(r), 3))]
+    plus_must = sum(1 for r in plus_all if r["toMove"]["win"])
+    if quick_example:
+        ex_shape, ex_fourth, ex_pair = quick_example
+        (OUT / name_file(ex_shape, "_quick")).write_text(svg(ex_shape, defense=ex_pair, rings=[ex_fourth], margin=1),
+                                                          encoding="utf-8")
 
     # --- main page ---------------------------------------------------------------------------------------------------
-    featured = unstop[:4]
-    u_label = {key(cells_of(r)): f"U{i}" for i, r in enumerate(unstop, 1)}
+    nf = nonforced_results(survey_path, deep_path) if survey_path else {}
+    unified = unified_unstoppable(unstop, nf)
+    u_label = {key(cells_of(r)): f"U{i}" for i, r in enumerate(unified, 1)}
+    u_canon = {canonical(cells_of(r)): f"U{i}" for i, r in enumerate(unified, 1)}
+    TAG = {"double": "forced win", "quiet": "non-forced win"}
+
+    def smaller_inside(shape):
+        """The label of the smallest unstoppable shape inside this one, if any."""
+        for n in range(2, len(shape)):
+            found = sorted(u_canon[canonical(list(t))] for t in combinations(shape, n) if canonical(list(t)) in u_canon)
+            if found:
+                return min(found, key=lambda x: int(x[1:]))
+        return None
+
+    # The featured ones win by double threats and hold no smaller unstoppable shape.
+    featured = [e for e in unified if e["kind"] == "double" and not smaller_inside(cells_of(e))][:4]
+    # the close pairs' finishes, named by the merged list's labels
+    reach = [(pair, sorted((u_label[key(cells_of(u))] for u in unstop
+                            if any(canonical(list(t)) == canonical(pair) for t in combinations(cells_of(u), 2))),
+                           key=lambda x: int(x[1:])))
+             for pair, _ in reach]
     is_tight = lambda t: canonical(list(t)) in a_label and int(a_label[canonical(list(t))][1:]) <= len(tight)
 
     def u_cell(r, suffix="", canvas=None):
         shape = cells_of(r)
         fname = name_file(shape, suffix)
         (OUT / fname).write_text(svg(shape, margin=1, canvas=canvas), encoding="utf-8")
-        named = describe(shape)
+        named = describe(shape) if len(shape) <= 3 or describe(shape).startswith("Diamond") else ""
         label = u_label[key(shape)]
-        n_tight = sum(is_tight(t) for t in combinations(shape, 3))
-        caption = f"<b>{label}</b>" + (f" · {named}" if named else "") + f"<br><sub>{n_tight} tight threes inside</sub>"
+        kind = r.get("kind", "double")
+        inner = smaller_inside(shape)
+        tag = (f"contains {inner or 'a proven shape'}" if kind == "contains"
+               else TAG.get(kind, kind) + (f" · contains {inner}" if inner else ""))
+        caption = f"<b>{label}</b>" + (f" · {named}" if named else "") + f"<br><sub>{tag}</sub>"
         return f'<td align="center"><img src="shapes/{fname}" alt="{label}"><br>{caption}</td>'
 
     def u_name(label):
-        r = next(r for r in unstop if u_label[key(cells_of(r))] == label)
+        r = next(r for r in unified if u_label[key(cells_of(r))] == label)
         named = describe(cells_of(r))
-        return f"{label} ({named.split(' ')[0].lower()})" if named else label
+        short = named.lower() if named.startswith(("Three", "Line")) else named.split(" ")[0].lower()
+        return f"{label} ({short})" if named else label
+
+    def u_ref(label):
+        """A U label in running text: "three in a row (U1)", or just the label for an unnamed shape."""
+        r = next(r for r in unified if u_label[key(cells_of(r))] == label)
+        named = describe(cells_of(r))
+        named = "diamond" if named.startswith("Diamond") else named.lower() if len(r["shape"]) <= 3 else ""
+        return f"{named} ({label})" if named else label
 
     def pair_name(pair):
         a, b = pair
@@ -1102,76 +1343,115 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
              "threat lives in a **window of six** cells in a row (orange), and a **four** (four of your stones in one "
              "window, none of the opponent's) threatens six next turn.", "",
              "**Tempo:** some fours take one stone to block, others (like four in a row with open ends) take both. A "
-             "defender who spends both stones builds nothing. A win is a turn whose threats take three or more stones to "
-             "block, reached by fours that take both stones every turn before it.", "",
-             "**Words:** a **shape** is some of one player's stones with nothing else nearby; stones belong to one shape "
-             "when they're within 2 cells, or on one line within 4, close enough to share a window of six "
-             "(rotations and mirror images count as the same shape). A shape is **must-answer** if its owner, moving next, wins by threats alone; a "
-             "reply **holds** if the solver then finds no such win (replies within 3 cells were tried). **Tight** and "
-             "**loose** threes and **close pairs** are defined below as they come up.", "",
+             "defender who spends both stones builds nothing. A **forced win** is a four every turn that takes both "
+             "stones (a **double threat**), until one turn's threats take three or more stones to block. A **non-forced "
+             "win** also needs at least one turn that isn't a double threat: a **quiet move** (no four, or a four one "
+             "stone can block).", "",
+             "**Key words:** a shape is **must-answer** if its owner, moving next, has a forced win; your reply **holds** "
+             "if the solver then finds no forced win; a shape is **unstoppable** if it wins even when you move first.",
+             "",
+             "<details><summary>More words</summary>", "",
+             "A **shape** is some of one player's stones with nothing else nearby; stones belong to one shape when "
+             "they're within 2 cells (at most 2 steps across the grid) or on one line within 4 (so they share a window "
+             "of six with room to spare); rotations and mirror images count as the same shape. The **lines** of a shape "
+             "are the lines through two or more of its stones. Replies within 3 cells were tried for **holds**; holding "
+             "stops the forced win, it doesn't make the position safe. **Open space** means no other stones nearby: "
+             "every shape here was checked alone on the board. **Two-stone** and **one-stone** threes and **close "
+             "pairs** are defined below.", "", "</details>", "",
              "**On this page:** [In short](#in-short) · [Using this in a game](#using-this-in-a-game) · "
              "[Fours](#fours) · [Close pairs](#close-pairs) · [Cheat sheet](#cheat-sheet) · [Attacking](#attacking) · "
              "[Worked examples](#worked-examples) · [Unstoppable shapes](#unstoppable-shapes) · "
              "[Test yourself](#test-yourself)", "",
              '<img src="shapes/legend-main.svg" alt="Diagram key">', "",
              "## In short", "",
-             "- **Must-answer three** (its owner, to move, wins by threats alone) → **answer it this turn with the "
-             "cheat-sheet reply.**",
-             f"- **Tight three** (triangle or chevron, no two stones more than 3 apart; {span(lab(tight))}) → **one stone "
+             "- **Must-answer three** (its owner, to move, has a forced win) → **answer it this turn with the "
+             "cheat-sheet reply.** If it's part of a four-stone shape, use step 4's quick rule or look the shape up in "
+             "the [catalogue](shapes-catalog.md).",
+             f"- **Two-stone three** (your answer takes both stones; a triangle or chevron with no two stones more than 3 "
+             f"apart; {span(lab(tight))}) → **one stone "
              "on each of two of its lines (blue), both within 2 cells of it.** Every such pair holds.",
-             f"- **Loose three** (any other must-answer three; {span(lab(loose))}) → **one stone on one of its lines, in a "
-             "gap or within 2 cells of its stones.** The other stone isn't needed against the threats: put it next to "
-             "the shape's close pair, or attack.",
+             f"- **One-stone three** (one of your stones is enough; every other must-answer three; {span(lab(loose))}) → "
+             "**one stone on one of its lines, in a gap or within 2 cells of that line's stones.** The other stone isn't needed "
+             "against the threats: put it on one of the ringed cells of its closest pair (see [Close pairs](#close-pairs)), "
+             "or attack.",
              "- **Four** → **block it now**: one stone in its gap, or both ends if it's solid.",
              "- **Close pair** (two stones within 2 cells, or 3 apart on one line) → **needs an answer too: your stones "
              "near it.** In open space, two more stones make any close pair unstoppable.",
-             f"- **{len(unstop)} unstoppable 4-stone shapes** win even when the opponent moves first. Each holds two or "
-             "more tight threes, though that alone isn't enough.", "",
+             f"- **{len(unified)} unstoppable shapes** win even when the opponent moves first, in open space. The smallest "
+             "is **three in a row**: nothing stops it once it has room around it. So in open space a free turn wins from "
+             "almost anything, which is why games stay crowded: never give the opponent a free turn where they have room.",
+             "",
              "## Using this in a game", "",
              "Each turn, in this order:", "",
              "1. **Can you make six?** Do it.",
              "2. **Does the opponent have a four?** Block it (see [Fours](#fours)). A block that also makes your own four "
              "is best.",
              "3. **Can you force a win?** You need a four that takes both of their stones every turn, until one turn's "
-             "threats take three stones to block (see the [worked example](#worked-examples)).",
+             "threats take three or more stones to block (see the [worked example](#worked-examples)).",
              "4. **Does the opponent have a must-answer shape?** Check their two new stones and anything of theirs within "
-             "5 cells (a window of six spans 5 steps). Threes: the [cheat sheet](#cheat-sheet). Four-stone clusters: "
-             "most are must-answer, so treat them as urgent (the ones with no must-answer three inside are in the "
-             "[catalogue](shapes-catalog.md)). Only skip this if step 3 wins first: an "
-             "unstoppable shape of yours doesn't stop their fours.",
+             "5 cells (a window of six spans 5 steps), and follow their lines: stones up to 4 apart on a line belong to "
+             "the same shape.",
+             "   - **A three on its own:** the [cheat sheet](#cheat-sheet).",
+             "   - **A must-answer three plus a fourth stone:** the cheat-sheet reply often fails here. **Quick rule** for "
+             "a two-stone three: use a two-lines reply with one stone on a line joining the fourth stone to one of the "
+             f"three's stones, within 2 cells of the fourth stone: it held {quick[1]:,} times out of {quick[0]:,}, and "
+             "it's possible in "
+             f"{usable} of the {total_tight} such shapes. For a one-stone three, use a dotted cell plus a stone placed the "
+             f"same way (holds {paired_pct}% of the time). Otherwise look the shape up in the "
+             "[catalogue](shapes-catalog.md)."
+             + (f' <br><img src="shapes/{name_file(quick_example[0], "_quick")}" alt="Quick rule example"> <sub>ringed: '
+                "the fourth stone; blue: a quick-rule reply</sub>" if quick_example else ""),
+             f"   - **No must-answer three inside, still must-answer:** three in one window plus a stone outside it "
+             f"({plus_patterns} shapes), or four spread-out stones ({two_pairs}; no three in one window, usually two close "
+             "pairs). These are the easiest to miss. "
+             + ("Every one" if minimal_one_stone == len(others) else f"{minimal_one_stone} of the {len(others)}")
+             + " has a cell where a single stone holds (dotted in the catalogue: "
+             "[three plus one](shapes-catalog.md#4-stones-a-three-plus-one), "
+             "[spread out](shapes-catalog.md#4-stones-spread-out)). For the spread-out ones, the ringed cells (or their "
+             "mirror image) of the closest pair, the one with the fewest cells between its stones (off the line if two "
+             f"are equally close), also hold in {closest_ok} of the {two_pairs}.",
+             f"   - **No reply holds** in {unholdable4} four-stone shapes: they're in the catalogue's "
+             "[unstoppable shapes](shapes-catalog.md#unstoppable-shapes), tagged forced win. Every other four-stone "
+             "must-answer shape except the fours has its own catalogue entry.",
+             "   - Don't skip this step to build your own shape: once they start making fours, you never get to use it.",
              "5. **Do you have a close pair in open space?** Add the two stones (+) that make it an unstoppable shape "
              "(see [Close pairs](#close-pairs)).",
-             "6. **Does the opponent have a close pair in open space?** Take its two ringed cells (see "
-             "[Close pairs](#close-pairs)). With two such pairs, answer neighbours or a one-gap pair first (a rule of "
-             "thumb: they have the most ways to finish).",
+             "6. **Does the opponent have a close pair in open space?** Two more stones make it "
+             "[unstoppable](#unstoppable-shapes), and neighbours or a one-gap pair need only one more for three in a "
+             "row. Take its two ringed cells (see [Close pairs](#close-pairs)): they stop it growing into an unstoppable "
+             "shape with a forced win, but they don't stop three in a row, and whether that still wins with your two stones nearby wasn't "
+             "settled. Two such pairs near each other can already be must-answer (step 4). Otherwise, with two pairs, "
+             "answer neighbours or a one-gap pair first (a rule of thumb: they have the most ways to finish).",
              "7. **Otherwise, [attack](#attacking).**", "",
-             "**Must-answer** needs a specific reply now (the cheat sheet); a **close pair** needs stones of yours near it "
-             "(see Close pairs). Nearly every enemy cluster needs one or the other.", "",
+             "**Must-answer** needs a specific reply now (the cheat sheet or the catalogue); a **close pair** needs stones "
+             "of yours near it "
+             "(see Close pairs). Nearly every group of enemy stones needs one or the other.", "",
              "<details><summary>Definitions and details</summary>", "",
              "<table><tr>" + "".join(
                  f'<td align="center"><img src="shapes/{name_file(sh, "_name")}" alt="{nm}"><br><sub>{nm}</sub></td>'
                  for sh, nm in NAME_STRIP) + "</tr></table>", "",
              "<sub>Names: the numbers are how far the two outer stones are from the corner stone. A triangle's lines meet "
-             "at 60°, a chevron's at 120°.</sub>", "",
+             "at 60°, a chevron's at 120°. On a line, they're the distances between neighbouring stones.</sub>", "",
 
-             "- **Holds:** after the reply, the solver finds no forced win. That stops the forced win; it doesn't make "
-             "the position safe.",
-             f"- {counts[3][1]} of the {counts[3][0]} three-stone shapes are must-answer. Against a tight three, only "
+             f"- {counts[3][1]} of the {counts[3][0]} three-stone shapes are must-answer. Against a two-stone three, only "
              "about 5% of all replies hold.",
              f"- The two-lines defence works for all {len(two_line)} threes with two or more lines ({span(two_line)}); "
              "against the classic triangle, those pairs are the only replies that hold.",
-             "- The loose-three rule works for every loose three"
+             "- The one-stone rule works for every one-stone three"
              + (f"; some also hold with one stone on other cells (extra cells: {', '.join(extras)})." if extras else "."),
-             f"- The other {counts[3][0] - counts[3][1]} threes aren't must-answer, but {quiet_threes} of them contain a "
-             "close pair that can grow into an unstoppable shape.",
-             f"- All {len(all_tight)} four-stone shapes in which every three stones form a tight three are unstoppable.",
-             "- **Within 2 cells:** at most 2 steps across the hex grid.",
-             "- **Lines of a shape:** the lines through two of its stones. The triangle 1+1 has three.",
+             f"- The other {counts[3][0] - counts[3][1]} threes aren't must-answer. {quiet_threes} of them contain a close "
+             "pair that two more stones turn into an unstoppable shape with a forced win; with a free turn, any of them "
+             "becomes unstoppable through three in a row.",
+             f"- All {len(all_tight)} four-stone shapes in which every three stones form a two-stone three are unstoppable.",
+             f"- **Inside a four-stone shape** the cheat-sheet replies hold less often: a two-stone three's two-lines "
+             f"reply {inside_pct}% of the time, a one-stone three's dotted cell alone {single_pct}%, a dotted cell plus any "
+             f"second stone within 3 cells {anywhere_pct}%. That's why step 4 has its own rules.",
              "- **Triangle a+b, chevron a+b:** two stones on two different lines from a corner stone, a and b cells "
              "away. The lines meet at 60° in a triangle and 120° in a chevron; only the equal triangles (1+1, 2+2, 3+3) "
              "close into a full triangle. The classic triangle and chevron (boomerang) are both 1+1.",
-             "- **Pair + 1 (2,3):** a pair plus a third stone 2 and 3 cells from the two; a split pair has one cell "
-             "between its stones, a wide pair two.", "",
+             "- **Pair + 1 (2,3):** a pair plus a third stone 2 and 3 cells from the two; a one-gap pair has one empty "
+             "cell between its stones, a two-gap pair two.",
+             "- **Line a+b:** three stones on one line, a and b cells apart. Line 1+1 is three in a row.", "",
              "</details>", "",
              "## Fours", "",
              "Four stones in one window of six threaten six next turn. With a gap, one stone on a dotted cell holds; the "
@@ -1186,13 +1466,27 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
         draws.append(lambda canvas, shape=shape, fname=fname, alone=alone, reply=ranked[0]: (
             fname, svg(shape, heat={c: 1.0 for c in alone}, margin=1, canvas=canvas) if alone
             else svg(shape, defense=reply, margin=1, canvas=canvas)))
+        also = u_canon.get(canonical(shape))
         lines.append(("</tr><tr>" if b == 5 else "") + f'<td align="center"><img src="shapes/{fname}" alt="F{b}"><br>'
-                     f"<b>F{b}</b><br>" + ("<sub>1 stone in a gap</sub>" if alone else "<sub>both stones</sub>") + "</td>")
+                     f"<b>F{b}</b><br>" + ("<sub>1 stone in a gap" if alone else "<sub>both stones")
+                     + (f" · also {also}" if also else "") + "</sub></td>")
     uniform(draws)
-    lines += ["</tr></table>", "",
+    lasting = [(f"F{b}", smaller_inside(cells_of(r))) for b, r in enumerate(in_window, 1) if canonical(cells_of(r)) in u_canon]
+    lines += ["</tr></table>", ""]
+    if lasting:
+        inner = sorted({i for _, i in lasting if i}, key=lambda x: int(x[1:]))
+        lines += [f"In open space {', '.join(f for f, _ in lasting[:-1])}{' and ' if len(lasting) > 1 else ''}"
+                  f"{lasting[-1][0]} win even after the block: "
+                  + (f"each contains {' or '.join(u_ref(i) for i in inner)}, which is [unstoppable](#unstoppable-shapes). "
+                     if inner else "they're [unstoppable](#unstoppable-shapes). ")
+                  + "Block anyway: the block stops six next turn, and real games are rarely that open.", ""]
+    lines += [
               "## Close pairs", "",
               "Each close pair becomes an [unstoppable shape](#unstoppable-shapes) with two more stones; one way is "
-              "marked (+). Two stones 4 apart on a line never do, so they aren't a close pair.", "", "<table><tr>"]
+              "marked (+). In open space even a single stone is dangerous: two stones next to it make three in a row, "
+              "which is [unstoppable](#unstoppable-shapes). Close pairs matter because they give the most ways to a forced win, "
+              "the kind that never gives the defender a free stone. A **way** is a pair of cells that finishes the pair into an "
+              "unstoppable shape with a forced win.", "", "<table><tr>"]
     draws = []
     for pair, grows in [(p, g) for p, g in reach if g]:
         fname = name_file(pair, "_grow")
@@ -1224,8 +1518,15 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
         fname = name_file(pair, "_answer")
         draws.append(lambda canvas, pair=pair, fname=fname, answer=answer: (
             fname, svg(pair, defense=answer, margin=1, canvas=canvas)))
-        lines.append(f'<td align="center"><img src="shapes/{fname}" alt="Your answer"><br><sub>your answer: these two '
-                     "(or their mirror image)</sub></td>")
+        images = set()
+        for f in TRANSFORMS:
+            img = [f(c) for c in pair]
+            for x, y in ((pair[0], pair[1]), (pair[1], pair[0])):
+                shift = (x[0] - img[0][0], x[1] - img[0][1])
+                if (img[1][0] + shift[0], img[1][1] + shift[1]) == y:
+                    images.add(tuple(sorted((f(c)[0] + shift[0], f(c)[1] + shift[1]) for c in answer)))
+        lines.append(f'<td align="center"><img src="shapes/{fname}" alt="Your answer"><br><sub>your answer: these two'
+                     + (" (or their mirror image)" if len(images) > 1 else "") + "</sub></td>")
     uniform(draws)
     lines += ["</tr><tr>"]
     draws = []
@@ -1239,6 +1540,7 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
         cells = sorted(per_cell)
         best = max(combinations(cells, 2), key=lambda ab: (sum(1 for w in ways if ab[0] in w or ab[1] in w), ab))
         cut = sum(1 for w in ways if best[0] in w or best[1] in w)
+        cut_shares.append(cut / len(ways))
         fname = name_file(pair, "_ways")
         draws.append(lambda canvas, pair=pair, fname=fname, per_cell=per_cell, top=top, best=best: (
             fname, svg(pair, heat={c: 0.99 * n / top for c, n in per_cell.items()}, rings=best, margin=1, canvas=canvas)))
@@ -1250,22 +1552,31 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
     uniform(draws)
     lines += ["</tr></table>", "",
               "The maps show the cells the owner can finish with (bluer = more ways)."
-              + (" **Two stones on the ringed cells are enough to stop it becoming unstoppable:** they take away about "
-                 "a third of the ways outright, and the solver checked every other way with those two stones on the board "
-                 "and found a reply that holds each time (replies within 3 cells). The owner can still build threats "
-                 "later; this only removes the sure win. So answer an opponent's close pair in open space with the ringed "
+              + (" **Two stones on the ringed cells stop it becoming an unstoppable shape with a forced win:** they "
+                 f"take away {round(100 * min(cut_shares))} to {round(100 * max(cut_shares))}% of those ways outright, "
+                 "and the solver checked every other one with those two "
+                 "stones on the board and found a reply that holds each time (replies within 3 cells). Whether they also "
+                 "stop the ones that need a non-forced win, like three in a row, wasn't checked; your stones nearby at least take away the "
+                 "open space those need. So answer an opponent's close pair in open space with the ringed "
                  "cells, and don't leave your own pairs where they can be answered this way before you use them."
                  if blocked and not any(v[1] for v in blocked.values()) else
-                 " Stones on the ringed cells take away about a third of the ways; keep stones near the opponent's "
+                 f" Stones on the ringed cells take away {round(100 * min(cut_shares))} to "
+                 f"{round(100 * max(cut_shares))}% of the ways; keep stones near the opponent's "
                  "pairs."), "",
               "## Cheat sheet", "",
-              "**Tight threes: two stones, one on each of two different ringed lines.** Any rotation or mirror image works "
-              "the same way.", "",
+              "**Two-stone threes: one stone on each of two blue lines (on the ringed cells).** Any rotation or mirror "
+              "image works the same way.", "",
               cheat_table(tight, a_label, "tight"), "",
-              "**Loose threes: one stone on any dotted cell.** The ringed ones are the rule's cells; every dotted cell "
+              "**One-stone threes: one stone on any dotted cell.** The ringed ones are the rule's cells; every dotted cell "
               "works.", "",
-              cheat_table(loose, a_label, "loose"), "",
-              "Defence maps and every holding reply are in the "
+              cheat_table(loose, a_label, "loose"), ""]
+    lasting = [r for r in threes if canonical(cells_of(r)) in u_canon]
+    if lasting:
+        names = [f"{describe(cells_of(r)).lower()} ({a_label[canonical(cells_of(r))]})" for r in lasting]
+        lines += [(f"The {names[0]} is" if len(names) == 1 else f"The {', '.join(names[:-1])} and {names[-1]} are")
+                  + " also [unstoppable](#unstoppable-shapes) in open space: the reply stops the threats, not the win. "
+                  "Answer anyway, and keep your stones close so the space isn't open.", ""]
+    lines += ["The defence map and the best holding replies for each are in the "
               "[catalogue](shapes-catalog.md#3-stone-must-answer-shapes).", ""]
 
     # attacking: a pair into a tight three, and the three-plus-one family
@@ -1287,13 +1598,21 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
               f'<img src="shapes/{fname}" alt="A pair plus one stone makes a triangle" align="right">', "",
               "- **Finish a close pair in open space.** If the opponent leaves one of your close pairs alone, the two "
               "(+) stones in [Close pairs](#close-pairs) make an unstoppable shape.",
-              "- **Turn a close pair into a tight three.** One stone does it (+ makes the triangle). The opponent must "
+              "- **Turn a close pair into a two-stone three.** One stone does it (+ makes the triangle). The opponent must "
               "answer with both stones, and your other stone is free to build somewhere else.",
+              f"- **Four spread-out stones.** {two_pairs} shapes with no three stones in one window and no must-answer "
+              "three inside are must-answer, "
+              "and opponents miss them ([catalogue](shapes-catalog.md#4-stones-spread-out)).",
               "- **Keep fours coming.** A four that takes both stones every turn leaves the opponent no time, as in the "
               "worked example below.",
-              "- **Three in a window plus one.** Three of your stones in one window of six with a fourth stone off that line "
-              f"is often must-answer ({len([r for r in others if most_in_window(r) == 3])} minimal patterns in the "
-              f"catalogue). {'One' if len(plus_one) == 1 else 'Two'} of them, with the winning first turn outlined:", ""]
+              *([f"- **Make three in a row where there's room.** It's must-answer, and in open space it wins even after "
+                 f"the opponent answers it ({u_canon[canonical([(0, 0), (0, 1), (0, 2)])]})."]
+                if canonical([(0, 0), (0, 1), (0, 2)]) in u_canon else []),
+              "- **Three in a window plus one.** Three of your stones in one window of six with a fourth stone outside that "
+              "window (on the same line or off it) "
+              f"is must-answer in {plus_must} of the {len(plus_all)} such shapes with no must-answer three inside (all "
+              f"in the catalogue). {'One' if len(plus_one) == 1 else 'Two'} of them, with the winning first turn "
+              "outlined:", ""]
     cells = []
     for r in plus_one:
         shape = cells_of(r)
@@ -1307,10 +1626,11 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
         uses_lone = any(lone in w for w in fours_now)
         cells.append(f'<td align="center"><img src="shapes/{fname}" alt="Three plus one"><br><sub>the outlined turn '
                      + ("builds its four through the lone stone" if uses_lone else
-                        "makes a four (five stones in the window)")
+                        "fills the window to five stones, one from six")
                      + f"; six on turn {r['toMove']['turns'] + 1}</sub></td>")
     lines += ["<table><tr>" + "".join(cells) + "</tr></table>", "",
-              "The three by itself isn't must-answer. The catalogue has all of them, with every holding reply, "
+              f"In these {len([r for r in others if most_in_window(r) == 3])} patterns the three alone isn't must-answer. "
+              "The catalogue has all of them, with the defence map and the best holding replies, "
               "under [a three plus one](shapes-catalog.md#4-stones-a-three-plus-one).", ""]
 
     if examples:
@@ -1333,13 +1653,46 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
                     "at once, and the solver finds no win after it.")
 
 
+    by_kind = defaultdict(int)
+    for e in unified:
+        by_kind[e["kind"]] += 1
     lines += ["## Unstoppable shapes", "",
-              f"{len(unstop)} four-stone shapes win even with the opponent to move: the solver tried every two-stone "
-              f"reply within 5 cells of each (about {tried_lo:,} to {tried_hi:,} replies) and none holds. You'll rarely meet one finished; it "
-              "appears in one turn when a close pair gets two free stones. Two tight threes inside aren't enough on their "
-              f"own: {holdable_two} other four-stone shapes have two or more and can still be held, so learn these shapes "
-              "rather than a rule. The four most compact (the rest are in the "
-              "[catalogue](shapes-catalog.md#unstoppable-shapes)):", ""]
+              f"{len(unified)} shapes of up to 4 stones win even when the defender moves first, in open space: every two "
+              "stones the defender can place within 5 cells were checked, directly or through a smaller shape inside. "
+              "Each is tagged by how it wins:", "",
+              f"- **Forced win** ({by_kind['double']}): a four every turn that takes both of the defender's stones, until "
+              f"one turn's threats can't all be blocked. The solver tried every two-stone reply within 5 cells (about {tried_lo:,} to "
+              f"{tried_hi:,} of them) and none holds. Easy to play once you see it, and the defender never gets a free stone.",
+              f"- **Non-forced win** ({by_kind['quiet']}): against some defences the owner needs a quiet move. Proven "
+              "by checking every defender reply after each of the owner's turns, with Six "
+              "suggesting those turns. Harder to play, and more fragile in a crowded game: the quiet move hands the "
+              "defender a free turn.",
+              f"- **Proven by containing one** ({by_kind['contains']}): proven only because it contains a smaller "
+              "unstoppable shape (your own extra stones never hurt). Shapes in the other two groups can contain one too; "
+              "their tag says so.", ""]
+    three = next((e for e in unified if e["stones"] == 3), None)
+    if three:
+        shape = cells_of(three)
+        reply, answer, is_quiet, settled = quiet_branch(three.get("proof") or {}, shape)
+        row = next((r for r in rows if canonical(cells_of(r)) == canonical(shape)), None)
+        fname = name_file(shape, "_nf")
+        (OUT / fname).write_text(svg(shape, defense=reply or (), first=answer or (), margin=2), encoding="utf-8")
+        name = describe(shape)
+        to_move = (f"With its owner to move it's must-answer: a four every turn, six on turn {row['toMove']['turns'] + 1}. "
+                   if row and row["toMove"]["win"] else "")
+        how = {"double": "with a forced win", "quiet": "but not always by force",
+               "contains": "since it contains a smaller unstoppable shape"}[three["kind"]]
+        example = ""
+        if three["kind"] == "quiet" and reply and is_quiet:
+            example = (": against some defences, like the one in blue, the owner answers with a quiet move "
+                       "(outlined)" + (", and after it every defender reply loses to a forced win." if settled else "."))
+        lines += [f"### {name} ({u_label[key(shape)]})", "",
+                  f'<img src="shapes/{fname}" alt="{name}, a defence and the answer">', "",
+                  to_move + f"With the defender moving first it still wins, {how}" + (example or ".")
+                  + " Real games are crowded, which is why this rarely decides them outright, but it's the reason never "
+                  "to leave a three room to grow.", ""]
+    lines += ["The four most compact with a forced win that don't contain a smaller unstoppable shape (all "
+              f"{len(unified)} are in the [catalogue](shapes-catalog.md#unstoppable-shapes)):", ""]
     sizes = []
     for r in featured:
         u_cell(r, "_big")
@@ -1355,18 +1708,38 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
             "The two-lines defence on one of its triangles", None, "",
             "The diamond is two triangles sharing a side. The defence that stops a lone triangle doesn't stop both: X "
             "still makes a four every turn and six on the last.")
-    nf_main, nf_cat = nonforced_section(nonforced_results(survey_path, deep_path), a_label) if survey_path else ([], [])
-    lines += nf_main
-    lines += quiz(tight, loose, in_window, a_label, refutes, reach, rows, cells_of, needed, [cells_of(r) for r in unstop])
+    nf_cat = nonforced_section(nf) if nf else []
+    limits_seen = []
+    if nf:
+        why = defaultdict(int)
+        for r in nf.values():
+            if r["result"] == "open":
+                why[open_reason(r)] += 1
+        parts = [(why["replies"], "too many defences survived to check them all"),
+                 (why["time"], "the proof ran out of time"),
+                 (why["held"], "a defence held against every turn Six suggested, within five turns"),
+                 (why["untried"], "no proof was tried")]
+        limit_words = {"replies": "too many defences", "time": "the time limit", "held": "five turns"}
+        limits_seen = [limit_words[k] for k in ("replies", "time", "held") if why[k]]
+        parts = [f"{text} ({n})" for n, text in parts if n]
+        lines += [f"The other {sum(why.values())} shapes of 2 to 4 stones are **not proven** either way with the "
+                  "defender moving first. Why no proof: " + "; ".join(parts) + ". Not proven doesn't mean defendable: "
+                  "proving a defence would mean solving the game around the shape. The "
+                  "[catalogue](shapes-catalog.md#not-proven) lists them with Six's estimate of the owner's chances.", ""]
+    lines += quiz(tight, loose, in_window, a_label, refutes, reach, rows, cells_of, needed, u_canon,
+                  lambda sh: u_ref(smaller_inside(sh)) if smaller_inside(sh) else None)
     lines += ["## What this doesn't cover", "",
               "- **Shapes near other stones.** Every shape here stands alone. In a real game the opponent's own threats "
               "(a counter-four while defending) and other stones change things.",
-              "- **Threes that aren't must-answer.** Answering their most dangerous pair with that pair's ringed "
+              "- **Threes that aren't must-answer.** Answering their most dangerous pair (step 6's order) with that pair's ringed "
               "cells is a rule of thumb; the solver check covered pairs on their own, not inside a three.",
-              "- **Longer non-forced wins.** A shape the survey didn't prove may still win with a longer quiet plan than "
-              "the five turns checked (see [Non-forced wins](#non-forced-wins)).",
-              f"- **Bigger shapes.** The [catalogue](shapes-catalog.md) lists {len(others)} more 4-stone shapes (not "
-              f"fours) and {counts[5][2]} 5-stone shapes that are must-answer and contain no smaller must-answer shape.",
+              *([f"- **Wins the proofs couldn't finish.** A shape that isn't proven may still win: its proof stopped "
+                 f"at a limit ({', '.join(limits_seen)}), as listed under [Unstoppable shapes](#unstoppable-shapes)."]
+                if limits_seen else []),
+              f"- **Bigger shapes.** Every must-answer shape of up to 4 stones is on this page (the fours) or in the "
+              "[catalogue](shapes-catalog.md). "
+              f"For 5 stones it lists the {counts[5][2]} minimal must-answer ones; each has a reply within 3 cells that "
+              "stops its forced win, but those replies aren't listed. Nothing past 5 stones was checked.",
               ""]
     write_page("shapes.md", lines)
     if needed:
@@ -1375,37 +1748,54 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
 
     # --- catalogue ---------------------------------------------------------------------------------------------------
     cat = ["# Shapes that win: catalogue", "",
-           "Every must-answer shape, with its holding replies. The rules and the cheat sheet are on the "
-           "[main page](shapes.md).", "",
+           "Every must-answer shape of up to 4 stones except the fours (on the [main page](shapes.md#fours)), with its "
+           "best holding replies. The rules and the cheat sheet are on the [main page](shapes.md).", "",
+           "**On this page:** [Summary](#summary) · [Unstoppable shapes](#unstoppable-shapes) · [Not proven](#not-proven) · "
+           "[3-stone must-answer shapes](#3-stone-must-answer-shapes) · [4 stones: a three plus one](#4-stones-a-three-plus-one) · "
+           "[4 stones: spread out](#4-stones-spread-out) · "
+           "[4 stones containing a must-answer three](#4-stones-containing-a-must-answer-three) · [5 stones](#5-stones)", "",
            '<img src="shapes/legend.svg" alt="Diagram key">', "",
-           "The threes are in the same order as the cheat sheet; the bigger shapes are sorted hardest first, by the share "
+           "The threes are in the same order as the cheat sheet; the 4-stone must-answer shapes are sorted hardest first, by the share "
            "of replies (pairs of empty cells within 3 cells of the shape) that hold. In names like \"Chevron 1+2\", the "
            "numbers are the distances from the corner stone to the other two.",
            "", "## Summary", "",
-           "| Stones | Shapes | Must-answer | Minimal must-answer | Unstoppable |",
+           "| Stones | Shapes | Must-answer | Minimal must-answer | Unstoppable (opponent moves first) |",
            "|---|---|---|---|---|"]
     for n in sorted(counts):
         c = counts[n]
-        cat.append(f"| {n} | {c[0]:,} | {c[1]:,} | {c[2]:,} | {str(c[3]) if n <= 4 else 'not checked'} |")
+        unstoppable_n = sum(1 for e in unified if e["stones"] == n)
+        cat.append(f"| {n} | {c[0]:,} | {c[1]:,} | {c[2]:,} | {unstoppable_n if n <= 4 else 'not checked'} |")
+    minimal_fours = counts[4][2] - len(others)
+    if minimal_fours > 0:
+        cat += ["", f"The minimal 4-stone count includes {plural(minimal_fours, 'four')}, shown on the "
+                "[main page](shapes.md#fours); the other " f"{len(others)} are below."]
     cat += ["",
             "A **shape** is some of one player's stones with nothing else nearby; rotations, mirror images and shifts "
             "count as the same shape, and stones count as one shape when they're within 2 cells or on one line within "
-            "4. **Must-answer:** its owner, to move, has a forced win. **Minimal:** it contains no smaller must-answer "
-            "shape. **Replies tried:** every pair of empty cells within 3 cells of the shape (within 5 for the "
-            "unstoppable shapes). **Six on turn N:** its owner makes a four on each of the first N − 1 turns.", ""]
-    cat += nf_cat
+            "4. **Must-answer:** its owner, to move, has a forced win (a four every turn that takes both stones). "
+            "**Minimal:** it contains no smaller "
+            "must-answer shape. **Unstoppable:** its owner wins even when the opponent moves first, whatever two stones "
+            "the opponent places within 5 cells, in open space. **Replies tried:** every pair of empty cells within 3 "
+            "cells of the shape (within 5 for the unstoppable shapes). **Six on turn N:** its owner makes a four on each "
+            "of the first N − 1 turns.", ""]
     cat += ["## Unstoppable shapes", "",
-            f"All {len(unstop)}, most compact first. Each wins even with the opponent to move.", "", "<table>"]
-    for i in range(0, len(unstop), 4):
-        cat.append("<tr>" + "".join(u_cell(r) for r in unstop[i:i + 4]) + "</tr>")
-    cat += ["</table>", "", "## 3-stone must-answer shapes", ""]
+            f"All {len(unified)}, smallest and most compact first. Each wins even with the opponent to move, in open "
+            "space; the tag says how.", "", "<table>"]
+    for i in range(0, len(unified), 4):
+        cat.append("<tr>" + "".join(u_cell(r) for r in unified[i:i + 4]) + "</tr>")
+    cat += ["</table>", ""] + nf_cat + ["", "## 3-stone must-answer shapes", ""]
     for r in threes:
-        cat += shape_block(r, a_label[canonical(cells_of(r))], turns_shown=False)
+        also = u_canon.get(canonical(cells_of(r)))
+        cat += shape_block(r, a_label[canonical(cells_of(r))], f"unstoppable in open space ({also})" if also else "",
+                           turns_shown=False)
     first_b = 1
-    families = [("## 4 stones: a three plus one", "Three stones in one window of six, plus a fourth stone off that line.",
+    families = [("## 4 stones: a three plus one", "Three stones in one window of six, plus a fourth stone outside that "
+                 "window (on the same line or off it), and no must-answer three inside.",
                  [r for r in others if most_in_window(r) == 3]),
-                ("## 4 stones: two pairs", "No three of the stones share a window of six, so nothing looks like a line "
-                 "yet. These are the easiest to overlook.", [r for r in others if most_in_window(r) < 3])]
+                ("## 4 stones: spread out", "No three of the stones share a window of six, and there's no "
+                 "must-answer three inside: usually two close pairs, "
+                 "sometimes stones 4 apart on one line plus one more. These are the easiest to overlook.",
+                 [r for r in others if most_in_window(r) < 3])]
     j = first_b - 1
     for heading, text, group in families:
         cat += [heading, "", f"{len(group)} shapes. {text}", "", "<table>"]
@@ -1426,12 +1816,47 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
             cat.append("</tr>")
         cat += ["</table>", "", "<details><summary>Holding replies for each</summary>", ""] + blocks + ["</details>", ""]
 
+    groups = defaultdict(list)
+    for r in clusters:
+        inner = sorted((a_label[canonical(list(t))] for t in combinations(cells_of(r), 3) if canonical(list(t)) in a_label),
+                       key=lambda x: int(x[1:]))
+        groups[inner[0]].append(r)
+    cat += ["## 4 stones containing a must-answer three", "",
+            f"{len(clusters)} shapes, each with one reply that holds (or, where one stone is enough, the dotted cells it can "
+            f"go on). The cheat-sheet reply for a two-stone three inside holds only about {inside_pct}% of the time, so "
+            "answer the whole shape. With a two-stone three inside, a two-lines reply with one stone on a line joining "
+            "the fourth stone to one of the other three, within 2 cells of the fourth stone, held every time "
+            f"({quick[1]:,} of {quick[0]:,}). Shapes no reply holds are under "
+            "[Unstoppable shapes](#unstoppable-shapes) instead. Grouped by the "
+            "three inside (the first, if there are several), hardest first.", ""]
+    for label in sorted(groups, key=lambda x: int(x[1:])):
+        group = hardest(groups[label])
+        inner_three = threes[int(label[1:]) - 1]
+        cat += [f"<details><summary>{label} · {describe(cells_of(inner_three))} plus a stone ({len(group)})</summary>", "",
+                "<table>"]
+        for i in range(0, len(group), 6):
+            row_cells = []
+            for k, r in enumerate(group[i:i + 6], i + 1):
+                shape = cells_of(r)
+                _, alone, ranked = defence_stats(shape, r["defenses"], 3)
+                fname = name_file(shape, "_reply")
+                (OUT / fname).write_text(svg(shape, heat={c: 1.0 for c in alone}, margin=1) if alone
+                                         else svg(shape, defense=ranked[0], margin=1), encoding="utf-8")
+                note = plural(len(alone), "one-stone cell") if alone else "this pair holds"
+                also = u_canon.get(canonical(shape))
+                row_cells.append(f'<td align="center"><img src="shapes/{fname}" alt="{label}.{k}"><br><b>{label}.{k}</b> '
+                                 f'<sub>{pct(len(r["defenses"]["holding"]), r["defenses"]["tried"])} hold · {note}'
+                                 + (f" · stops the forced win only: unstoppable ({also})" if also else "") + "</sub></td>")
+            cat.append("<tr>" + "".join(row_cells) + "</tr>")
+        cat += ["</table>", "", "</details>", ""]
+
     five = sorted((r for r in rows if r["stones"] == 5 and r["toMove"]["win"] and minimal(r)),
                   key=lambda r: (r["toMove"]["turns"], r["shape"]))
     if five:
         cat += ["## 5 stones", "",
-                f"The {len(five)} minimal ones, quickest wins first. Their replies weren't checked (that would take many "
-                "hours), so there are no defences.", "", "<table>"]
+                f"The {len(five)} minimal ones, quickest wins first. Each has a reply within 3 cells that stops its forced "
+                "win (checked), so none is unstoppable by a forced win; the replies themselves aren't listed.", "",
+                "<table>"]
         for i in range(0, len(five), 5):
             cat.append("<tr>")
             for j, r in enumerate(five[i:i + 5], i + 1):

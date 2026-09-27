@@ -81,6 +81,20 @@ TEST_CASE("mcts: plays the double-threat win the solver finds") {
   CHECK_EQ(result.stones.size(), std::size_t{2});
 }
 
+TEST_CASE("mcts: with rootThreatWide the root finds three in a row's win, whose first turn has a free stone") {
+  // Three in a row with its owner to move, the opponent's stones far away.
+  Board b = play({{0, 0}, {9, -9}, {-9, 9}, {0, 1}, {0, 2}, {9, 0}, {-9, 0}});
+  six::Mcts mcts(tinyNet());
+  mcts.params().batch = 8;
+  CHECK(mcts.params().set("rootThreatWide", 1));
+  mcts.params().rootThreatNodes = 200'000;
+  six::SearchLimits limits;
+  limits.maxNodes = 32;
+  const auto result = mcts.search(b, limits);
+  CHECK_EQ(result.score, six::kWinScore);
+  CHECK_EQ(result.stones.size(), std::size_t{2});
+}
+
 TEST_CASE("mcts: always returns a legal complete turn on fixture positions") {
   std::ifstream in(SIX_FIXTURES "/games.txt");
   std::string line;

@@ -12,7 +12,7 @@
 <text x="50" y="141" font-family="Arial, sans-serif" font-size="15" fill="#d9e1f2">Holds on its own, whatever the second stone does</text>
 <polygon points="36.7,166.6 36.7,181.4 24.0,188.7 11.3,181.4 11.3,166.6 24.0,159.3" fill="#1b2233"/>
 <polygon points="33.1,168.7 33.1,179.3 24.0,184.6 14.9,179.3 14.9,168.7 24.0,163.4" fill="none" stroke="#87d1f7" stroke-width="2.5"/>
-<text x="50" y="179" font-family="Arial, sans-serif" font-size="15" fill="#d9e1f2">Ringed: cells the defence rule uses</text>
+<text x="50" y="179" font-family="Arial, sans-serif" font-size="15" fill="#d9e1f2">Ringed: the cells or stones the text points to</text>
 <polygon points="36.7,204.6 36.7,219.4 24.0,226.7 11.3,219.4 11.3,204.6 24.0,197.3" fill="#f6d04a"/>
 <text x="24" y="216" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#0b0e15">3</text>
 <text x="50" y="217" font-family="Arial, sans-serif" font-size="15" fill="#d9e1f2">Worked examples: stones numbered by turn</text>

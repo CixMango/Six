@@ -137,6 +137,7 @@ bool MctsParams::set(const std::string& name, std::int64_t value) {
   else if (name == "secondStoneShare") secondStoneShare = static_cast<int>(std::clamp<std::int64_t>(value, 0, 90));
   else if (name == "cacheEntries") cacheEntries = std::clamp<std::int64_t>(value, 0, std::int64_t{1} << 24);
   else if (name == "reuseTree") reuseTree = value != 0;
+  else if (name == "rootThreatWide") rootThreatWide = value != 0;
   else return false;
   return true;
 }
@@ -152,13 +153,15 @@ std::vector<std::pair<std::string, std::int64_t>> MctsParams::list() const {
           {"rootSolverShare", rootSolverShare},
           {"secondStoneShare", secondStoneShare},
           {"cacheEntries", cacheEntries},
-          {"reuseTree", reuseTree ? 1 : 0}};
+          {"reuseTree", reuseTree ? 1 : 0},
+          {"rootThreatWide", rootThreatWide ? 1 : 0}};
 }
 
 struct Mcts::Impl {
   NetworkEvaluator& evaluator;
   MctsParams params;
   ThreatSolver solver;
+  ThreatSolver wideSolver;  // the root's, with rootThreatWide
   Board board{9};
   std::vector<Node> nodes;
   std::vector<Leaf> leaves;
@@ -174,7 +177,11 @@ struct Mcts::Impl {
   Clock::time_point deadline = Clock::time_point::max();
   int maxDepth = 0;
 
-  Impl(NetworkEvaluator& e, int solverMegabytes) : evaluator(e), solver(solverMegabytes) {}
+  Impl(NetworkEvaluator& e, int solverMegabytes) : evaluator(e), solver(solverMegabytes), wideSolver(solverMegabytes) {
+    wideSolver.setWide(true);
+  }
+
+  ThreatSolver& rootSolver() { return params.rootThreatWide ? wideSolver : solver; }
 
   void prepareCache() {
     std::size_t size = 0;
@@ -456,7 +463,7 @@ struct Mcts::Impl {
     leaves.clear();
     maxDepth = 0;
     nodes.push_back(Node{});
-    const Tactics tactics = analyze(board, solver, params.rootThreatNodes, params.rootThreatTurns);
+    const Tactics tactics = analyze(board, rootSolver(), params.rootThreatNodes, params.rootThreatTurns);
     if (tactics.terminal && tactics.value > 0.0f) {
       choice.move = tactics.winning.front();
       choice.value = 1.0f;
@@ -601,6 +608,7 @@ Mcts::~Mcts() = default;
 
 void Mcts::newGame() {
   impl_->solver.clear();
+  impl_->wideSolver.clear();
   impl_->treeRoot = -1;
 }
 
@@ -632,7 +640,7 @@ SearchResult Mcts::search(const Board& position, const SearchLimits& limits, con
 
   const auto total = limits.moveTimeMs >= 0 ? std::chrono::milliseconds(limits.moveTimeMs) : std::chrono::milliseconds(24 * 3600 * 1000);
   s.deadline = started + total;
-  const Tactics rootTactics = analyze(s.board, s.solver, s.params.rootThreatNodes, s.params.rootThreatTurns,
+  const Tactics rootTactics = analyze(s.board, s.rootSolver(), s.params.rootThreatNodes, s.params.rootThreatTurns,
                                       started + total * s.params.rootSolverShare / 100);
   if (rootTactics.terminal && rootTactics.value > 0.0f) {
     result.stones = rootTactics.winning;

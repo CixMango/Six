@@ -195,10 +195,13 @@ def one_per_orbit(replies, maps):
 
 
 PROVEN_CACHE = {}  # position key -> fewest owner turns it was proven with (defender to move)
+QUICK_MS = 300  # Six's short first look at the owner's turn (0: off); the full search runs when it isn't a win
+ORDER_MS = 1000  # Six's own defence, used only to order the replies (every one is checked anyway)
 
 
-def prove_shape(six, shape, depth, threads, say=print, candidates=3):
-    """True with the proof tree, or False with the line still open."""
+def prove_shape(six, shape, depth, threads, say=print, candidates=3, theirs=(), owner_first=False):
+    """True with the proof tree, or False with the line still open. `theirs` are opponent stones already down;
+    `owner_first` starts with the owner to move instead of the opponent."""
     stats = {"positions": 0}
     killers = {}  # owner turns that already won at this depth: tried first, before asking Six
 
@@ -210,6 +213,15 @@ def prove_shape(six, shape, depth, threads, say=print, candidates=3):
             if not (set(k) & taken) and not holding_replies(xs + k, os_, threads)[0]:
                 say(f"{'  ' * len(line)}X {k} (reused)")
                 return True, None, {"X": k, "then": {"survive": []}}
+        if QUICK_MS:
+            # A short look first: when that turn already leaves no defence, the full search isn't needed.
+            quick, _ = six.move(xs, os_, movetime=QUICK_MS)
+            if not (set(quick) & taken):
+                holding, tried, _ = holding_replies(xs + quick, os_, threads)
+                if not holding:
+                    say(f"{'  ' * len(line)}X {quick} (quick look)")
+                    killers.setdefault(left, []).insert(0, quick)
+                    return True, None, {"X": quick, "then": {"tried": tried, "survive": []}}
         turn, score = six.move(xs, os_)
         options = [turn]
         if candidates > 1 and holding_replies(xs + turn, os_, threads)[0]:
@@ -251,7 +263,7 @@ def prove_shape(six, shape, depth, threads, say=print, candidates=3):
             + (f" ({unknown} undecided)" if unknown else ""))
         if len(holding) > 1:
             # Six's own choice of defence goes first: if the proof is going to fail, it most likely fails there.
-            best, _ = six.move(xs, os_, x_to_move=False)
+            best, _ = six.move(xs, os_, x_to_move=False, movetime=ORDER_MS)
             holding.sort(key=lambda pair: 0 if set(pair) == set(best) else 1)
         branches = []
         for reply in holding:
@@ -263,7 +275,10 @@ def prove_shape(six, shape, depth, threads, say=print, candidates=3):
         PROVEN_CACHE[key] = min(PROVEN_CACHE.get(key, 99), left)
         return True, None, {"tried": tried, "survive": branches}
 
-    ok, bad, tree = defender_to_move(list(shape), [], depth, [])
+    if owner_first:
+        ok, bad, tree = owner_to_move(list(shape), list(theirs), depth, [])
+    else:
+        ok, bad, tree = defender_to_move(list(shape), list(theirs), depth, [])
     return ok, (tree if ok else bad), stats["positions"]
 
 

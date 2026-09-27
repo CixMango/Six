@@ -24,8 +24,8 @@
 <polygon points="68.2,-7.4 68.2,7.4 55.4,14.7 42.7,7.4 42.7,-7.4 55.4,-14.7" fill="#1b2233"/>
 <polygon points="82.0,16.6 82.0,31.4 69.3,38.7 56.5,31.4 56.5,16.6 69.3,9.3" fill="#1b2233"/>
 <polygon points="82.0,-31.4 82.0,-16.6 69.3,-9.3 56.5,-16.6 56.5,-31.4 69.3,-38.7" fill="#1b2233"/>
-<polygon points="23.6,66.4 23.6,77.6 13.9,83.2 4.2,77.6 4.2,66.4 13.9,60.8" fill="none" stroke="#f6d04a" stroke-width="2.5" stroke-dasharray="4 3"/>
-<text x="13.9" y="77.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#f6d04a">+</text>
-<polygon points="37.4,90.4 37.4,101.6 27.7,107.2 18.0,101.6 18.0,90.4 27.7,84.8" fill="none" stroke="#f6d04a" stroke-width="2.5" stroke-dasharray="4 3"/>
-<text x="27.7" y="101.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#f6d04a">+</text>
+<polygon points="23.6,18.4 23.6,29.6 13.9,35.2 4.2,29.6 4.2,18.4 13.9,12.8" fill="none" stroke="#f6d04a" stroke-width="2.5" stroke-dasharray="4 3"/>
+<text x="13.9" y="29.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#f6d04a">+</text>
+<polygon points="37.4,-5.6 37.4,5.6 27.7,11.2 18.0,5.6 18.0,-5.6 27.7,-11.2" fill="none" stroke="#f6d04a" stroke-width="2.5" stroke-dasharray="4 3"/>
+<text x="27.7" y="5.0" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#f6d04a">+</text>
 </svg>
