@@ -555,6 +555,116 @@ NAME_STRIP = [([(0, 0), (0, 1), (1, 0)], "Triangle 1+1"), ([(0, 0), (0, 1), (3, 
               ([(0, 0), (0, 1), (1, -2)], "Pair + 1 (2,3)")]
 
 
+def nonforced_results(survey_path, deep_path):
+    """Every 2-4 stone shape with the defender moving first: forced (double threats), proven (with non-forced turns),
+    contains (holds a proven shape) or open (with Six's rating), latest result per shape."""
+    results = {}
+    for path in (survey_path, deep_path):
+        if not path or not Path(path).exists():
+            continue
+        for line in open(path, encoding="utf-8"):
+            r = json.loads(line)
+            k = canonical([tuple(c) for c in r["shape"]])
+            old = results.get(k)
+            if old and old["result"] in ("forced", "proven", "contains") and r["result"] == "open":
+                continue
+            merged = dict(old or {})
+            merged.update(r)
+            results[k] = merged
+    return results
+
+
+def owner_chance(r):
+    """Six's rating of the defender (-1000 to 1000), as the owner's chance of winning."""
+    v = r.get("six_defender")
+    return None if v is None else 1 - (v / 1000 + 1) / 2
+
+
+def natural_branch(proof, shape):
+    """The branch of a proof for the defender's most natural reply (closest to the shape) and the owner's answer."""
+    branches = proof.get("survive") or []
+    if not branches:
+        return None, None
+    best = min(branches, key=lambda b: sum(min(dist(tuple(c), x) for x in shape) for c in b["O"]))
+    return [tuple(c) for c in best["O"]], [tuple(c) for c in best["then"]["X"]]
+
+
+def nonforced_section(results, labels_for):
+    """Main-page section and catalogue section for non-forced wins."""
+    by = defaultdict(lambda: defaultdict(list))
+    for k, r in results.items():
+        by[r["stones"]][r["result"]].append(r)
+    proven = [r for r in results.values() if r["result"] == "proven"]
+    solved = {k for k, r in results.items() if r["result"] in ("forced", "proven")}
+
+    def minimal(r):
+        shape = [tuple(c) for c in r["shape"]]
+        return not any(canonical(list(t)) in solved for n in range(2, len(shape)) for t in combinations(shape, n))
+
+    shown = sorted((r for r in proven if minimal(r)), key=lambda r: (r["stones"], r["shape"]))
+    main = ["## Non-forced wins", "",
+            "Everything above counts only **forced wins**: every attacking turn is a double threat that takes both of the "
+            "defender's stones. A **non-forced win** also allows turns that aren't, a quiet move or a single threat, "
+            "as long as the attacker still wins whatever the defender does. Six's solver checked every shape of 2, 3 and "
+            "4 stones with **the defender moving first**, allowing up to five of the attacker's turns: Six suggests the "
+            "attacker's turn and every defender reply is checked.", "",
+            "| Stones | Shapes | Unstoppable by double threats | Proven with non-forced turns | Contain one of those | "
+            "Not proven |", "|---|---|---|---|---|---|"]
+    for n in sorted(by):
+        c = by[n]
+        total = sum(len(v) for v in c.values())
+        main.append(f"| {n} | {total} | {len(c['forced'])} | {len(c['proven'])} | {len(c['contains'])} | {len(c['open'])} |")
+    main += ["",
+             "**Open space favours the attacker far more than double threats show.** Three in a row, which has no forced "
+             "win even when its owner moves first, is a proven win even when the defender moves first: the attacker "
+             "answers any reply with one quiet turn that makes an unstoppable shape. Real games are crowded, which is "
+             "why this rarely decides them outright; keep the fight where your stones are.", "",
+             f"The {len(shown)} proven shapes that don't contain a smaller proven one, each with a natural defence (blue) and "
+             "the attacker's answer (outlined):", "", "<table>"]
+    cells = []
+    for i, r in enumerate(shown, 1):
+        shape = [tuple(c) for c in r["shape"]]
+        reply, answer = natural_branch(r.get("proof") or {}, shape)
+        fname = name_file(shape, "_nf")
+        (OUT / fname).write_text(svg(shape, defense=reply or (), first=answer or (), margin=1), encoding="utf-8")
+        named = describe(shape) if len(shape) <= 3 else ""
+        cells.append(f'<td align="center"><img src="shapes/{fname}" alt="N{i}"><br><b>N{i}</b>'
+                     + (f" · {named}" if named else "") + "</td>")
+    for i in range(0, len(cells), 4):
+        main.append("<tr>" + "".join(cells[i:i + 4]) + "</tr>")
+    main += ["</table>", "",
+             "\"Not proven\" doesn't mean defendable: proving a defence would mean solving the game around the shape. "
+             "Most of those shapes need a longer quiet plan than the five turns checked. The "
+             "[catalogue](shapes-catalog.md#non-forced-results) lists each with Six's estimate of the owner's chances.", ""]
+
+    cat = ["## Non-forced results", "",
+           "Every shape of 2 to 4 stones with the defender moving first. \"Owner's chance\" is Six's estimate for the "
+           "shapes no proof settled.", ""]
+    for n in sorted(by):
+        c = by[n]
+        cat += [f"### {n} stones", ""]
+        if c["proven"] or c["contains"]:
+            cat += [f"Proven with non-forced turns: {len(c['proven'])}; contain a proven shape: {len(c['contains'])}.", ""]
+        rest = sorted(c["open"], key=lambda r: -(owner_chance(r) or 0))
+        if rest:
+            cat += ["<details><summary>Not proven, by Six's estimate of the owner's chance</summary>", "", "<table>"]
+            row = []
+            for r in rest:
+                shape = [tuple(x) for x in r["shape"]]
+                fname = name_file(shape, "_open")
+                (OUT / fname).write_text(svg(shape, margin=1), encoding="utf-8")
+                ch = owner_chance(r)
+                row.append(f'<td align="center"><img src="shapes/{fname}" alt="shape"><br><sub>'
+                           + (f"owner {ch:.0%}" if ch is not None else "not rated") + "</sub></td>")
+                if len(row) == 6:
+                    cat.append("<tr>" + "".join(row) + "</tr>")
+                    row = []
+            if row:
+                cat.append("<tr>" + "".join(row) + "</tr>")
+            cat += ["</table>", "", "</details>", ""]
+    return main, cat
+
+
 def quiz(tight, loose, fours, labels, refutes, reach, rows, cells_of, needed, unstop_shapes=()):
     """Five questions: three 'which reply holds', one 'which three is must-answer', one 'which pair can't grow'."""
     out = ["## Test yourself", "", "The answer is folded under each question.", ""]
@@ -820,7 +930,7 @@ def defence_example(line, title, wrong_caption, holding, holding_caption, text):
             + [f"{i + 1}. {f[6]}" for i, f in enumerate(frames)] + ["", "</details>", ""])
 
 
-def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None):
+def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, survey_path=None, deep_path=None):
     rows = {}
     for path in paths:
         for line in open(path, encoding="utf-8"):
@@ -1245,14 +1355,16 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None):
             "The two-lines defence on one of its triangles", None, "",
             "The diamond is two triangles sharing a side. The defence that stops a lone triangle doesn't stop both: X "
             "still makes a four every turn and six on the last.")
+    nf_main, nf_cat = nonforced_section(nonforced_results(survey_path, deep_path), a_label) if survey_path else ([], [])
+    lines += nf_main
     lines += quiz(tight, loose, in_window, a_label, refutes, reach, rows, cells_of, needed, [cells_of(r) for r in unstop])
     lines += ["## What this doesn't cover", "",
               "- **Shapes near other stones.** Every shape here stands alone. In a real game the opponent's own threats "
               "(a counter-four while defending) and other stones change things.",
               "- **Threes that aren't must-answer.** Answering their most dangerous pair with that pair's ringed "
               "cells is a rule of thumb; the solver check covered pairs on their own, not inside a three.",
-              "- **Quiet wins.** Must-answer means a win by threats alone. A shape without one, like three in a row, can "
-              "still win with a free turn (see [Close pairs](#close-pairs)).",
+              "- **Longer non-forced wins.** A shape the survey didn't prove may still win with a longer quiet plan than "
+              "the five turns checked (see [Non-forced wins](#non-forced-wins)).",
               f"- **Bigger shapes.** The [catalogue](shapes-catalog.md) lists {len(others)} more 4-stone shapes (not "
               f"fours) and {counts[5][2]} 5-stone shapes that are must-answer and contain no smaller must-answer shape.",
               ""]
@@ -1280,8 +1392,9 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None):
             "count as the same shape, and stones count as one shape when they're within 2 cells or on one line within "
             "4. **Must-answer:** its owner, to move, has a forced win. **Minimal:** it contains no smaller must-answer "
             "shape. **Replies tried:** every pair of empty cells within 3 cells of the shape (within 5 for the "
-            "unstoppable shapes). **Six on turn N:** its owner makes a four on each of the first N − 1 turns.", "",
-            "## Unstoppable shapes", "",
+            "unstoppable shapes). **Six on turn N:** its owner makes a four on each of the first N − 1 turns.", ""]
+    cat += nf_cat
+    cat += ["## Unstoppable shapes", "",
             f"All {len(unstop)}, most compact first. Each wins even with the opponent to move.", "", "<table>"]
     for i in range(0, len(unstop), 4):
         cat.append("<tr>" + "".join(u_cell(r) for r in unstop[i:i + 4]) + "</tr>")
@@ -1341,4 +1454,4 @@ def write_page(name, lines):
 if __name__ == "__main__":
     flags = dict(a[2:].split("=", 1) for a in sys.argv[1:] if a.startswith("--"))
     main([a for a in sys.argv[1:] if not a.startswith("--")], flags.get("unstoppable"), flags.get("lines"),
-         flags.get("pairblock"))
+         flags.get("pairblock"), flags.get("survey"), flags.get("deep"))

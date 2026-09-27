@@ -8,13 +8,18 @@ on:
       version:
         description: Release version without the v, e.g. 1.2.0
         required: true
+      publish:
+        description: Attach the downloads to the release (off to only build and test them)
+        type: boolean
+        default: true
 
 permissions:
   contents: write
 
 jobs:
   linux:
-    runs-on: ubuntu-24.04
+    # The oldest supported Ubuntu, so the download runs on distributions with an older C library.
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -22,8 +27,8 @@ jobs:
         with:
           node-version: 24
 
-      - name: Build tools (and a software Vulkan driver to test WebGPU on)
-        run: sudo apt-get update && sudo apt-get install -y ninja-build libvulkan1 mesa-vulkan-drivers
+      - name: Build tools
+        run: sudo apt-get update && sudo apt-get install -y ninja-build g++-12
 
       - name: ONNX Runtime (CUDA 12 build) and the WebGPU plugin
         run: |
@@ -37,20 +42,19 @@ jobs:
       - name: Engine
         working-directory: engine
         run: |
-          cmake --preset linux
+          cmake --preset linux -DCMAKE_CXX_COMPILER=g++-12
           cmake --build --preset linux
           ./build/linux/sixtests
-          # WebGPU on the software Vulkan driver: the network must load on it and play a move.
-          (printf 'six\nisready\nposition radius 8 moves 0 0 1 0 2 -1\ngo movetime 3000\n'; sleep 30; echo quit) \
-            | ./build/linux/sixengine --net tests/fixtures/tiny.onnx --webgpu 2>&1 | tee /tmp/webgpu.txt
-          grep -q "using WebGPU" /tmp/webgpu.txt
-          grep -q "^bestmove" /tmp/webgpu.txt
+
+      # The software Vulkan driver on 22.04 is too old for WebGPU, so this runs in a newer container.
+      - name: WebGPU
+        run: docker run --rm -v "$PWD/engine:/engine:ro" -v "$PWD/.github/webgpu-check.sh:/check.sh:ro" ubuntu:24.04 sh /check.sh
 
       - name: Network from the Windows download
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download "v${{ inputs.version }}" --pattern '*windows-x64.zip' --dir net
+          gh release download "v${{ inputs.version }}" -R CixMango/Six --pattern '*windows-x64.zip' --dir net
           unzip -q net/*.zip -d net
 
       - name: Package
@@ -69,7 +73,16 @@ jobs:
           curl -sf -X POST http://localhost:6690/api/bot/turn -H 'content-type: application/json' \
             -d '{"moves":[[0,0],[1,0],[2,-1]],"radius":8,"bot":"hexnet","level":1}' | grep -q cells
 
+      - name: Bare distributions (no graphics drivers, older libraries)
+        run: |
+          for image in ubuntu:22.04 debian:12 fedora:41 archlinux:latest; do
+            echo "::group::$image"
+            docker run --rm -v /tmp/Six:/six:ro -v "$PWD/.github/linux-check.sh:/check.sh:ro" "$image" sh /check.sh
+            echo "::endgroup::"
+          done
+
       - name: Attach to the release
+        if: inputs.publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "v${{ inputs.version }}" web/release/Six-*-linux-x64.tar.gz --clobber
@@ -110,7 +123,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download "v${{ inputs.version }}" --pattern '*windows-x64.zip' --dir net
+          gh release download "v${{ inputs.version }}" -R CixMango/Six --pattern '*windows-x64.zip' --dir net
           unzip -q net/*.zip -d net
 
       - name: Package
@@ -130,6 +143,7 @@ jobs:
             -d '{"moves":[[0,0],[1,0],[2,-1]],"radius":8,"bot":"hexnet","level":1}' | grep -q cells
 
       - name: Attach to the release
+        if: inputs.publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "v${{ inputs.version }}" web/release/Six-*-macos-arm64.zip --clobber

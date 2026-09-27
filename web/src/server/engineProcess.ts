@@ -6,6 +6,14 @@ import type { Hex } from '../shared/hex.ts';
 export class EngineProcess {
   private child: ChildProcessWithoutNullStreams | null = null;
   private listeners = new Set<(line: string) => void>();
+  private stopListeners = new Set<(why: string) => void>();
+  // The engine's last few lines on stderr, shown when it stops (they say why).
+  private said: string[] = [];
+  // It stopped on its own (a crash or a failed start), not because it was closed.
+  crashed = false;
+  // It stopped before its first answer: it couldn't start (a network the graphics card can't run, for example).
+  failedToStart = false;
+  private answered = false;
   private queue: Promise<unknown> = Promise.resolve();
   // A fresh process may build a TensorRT engine first, which can take a minute or two.
   private startedFresh = false;
@@ -54,9 +62,10 @@ export class EngineProcess {
   close(): void {
     if (this.idleTimer) clearTimeout(this.idleTimer);
     this.idleTimer = null;
-    this.child?.stdin.write('quit\n');
-    this.child?.kill();
+    const child = this.child;
     this.child = null;
+    child?.stdin.write('quit\n');
+    child?.kill();
   }
 
   private ensureStarted(): ChildProcessWithoutNullStreams {
@@ -65,9 +74,28 @@ export class EngineProcess {
     createInterface({ input: child.stdout }).on('line', (line) => {
       for (const listener of this.listeners) listener(line);
     });
-    child.on('exit', () => {
-      if (this.child === child) this.child = null;
+    this.said = [];
+    createInterface({ input: child.stderr }).on('line', (line) => {
+      console.error(`[engine] ${line}`);
+      this.said.push(line);
+      if (this.said.length > 5) this.said.shift();
     });
+    // Writing to a process that already died fails here; its exit is reported below.
+    child.stdin.on('error', () => undefined);
+    let stopped = false;
+    const stop = (why: string) => {
+      if (stopped) return;
+      stopped = true;
+      if (this.child !== child) return; // closed or replaced on purpose
+      this.child = null;
+      this.crashed = true;
+      this.failedToStart = !this.answered;
+      for (const listener of this.stopListeners) listener(why);
+    };
+    this.answered = false;
+    child.on('error', (error) => stop(error.message));
+    // 'close' comes after stderr is read to the end, so the reason is in `said` by then.
+    child.on('close', (code, signal) => stop(signal ? `killed by ${signal}` : `exit code ${code}`));
     this.child = child;
     this.startedFresh = true;
     for (const line of this.setup) child.stdin.write(`${line}\n`);
@@ -82,9 +110,14 @@ export class EngineProcess {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         cleanup();
+        if (this.child === child) this.child = null;
         child.kill();
         reject(new Error('The engine did not answer in time.'));
       }, moveTimeMs + grace);
+      const onStop = (why: string) => {
+        cleanup();
+        reject(new Error(`The engine stopped (${why})${this.said.length ? `: ${this.said.join(' / ')}` : ''}`));
+      };
       const onLine = (line: string) => {
         const info = /^info .*\bscore (-?\d+)/.exec(line);
         if (info) score = Number(info[1]);
@@ -93,6 +126,7 @@ export class EngineProcess {
           reject(new Error(`Engine ${line}`));
         } else if (line.startsWith('bestmove')) {
           cleanup();
+          this.answered = true;
           const numbers = line.split(/\s+/).slice(1).map(Number);
           if (numbers.some(Number.isNaN) || numbers.length === 0 || numbers.length % 2 !== 0) {
             reject(new Error(`Engine sent an unreadable move: ${line}`));
@@ -106,8 +140,10 @@ export class EngineProcess {
       const cleanup = () => {
         clearTimeout(timer);
         this.listeners.delete(onLine);
+        this.stopListeners.delete(onStop);
       };
       this.listeners.add(onLine);
+      this.stopListeners.add(onStop);
       const flat = moves.map((m) => `${m.q} ${m.r}`).join(' ');
       child.stdin.write(`position radius ${radius}${flat ? ` moves ${flat}` : ''}\n`);
       child.stdin.write(`go movetime ${Math.round(moveTimeMs)}\n`);

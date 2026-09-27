@@ -100,11 +100,28 @@ std::vector<PairKey> bruteCoveringPairs(Board& b, Player attacker) {
   return pairs;
 }
 
+/** Whether a stone on `c` joins a window holding one or more of `p`'s stones and none of the opponent's. */
+bool inLiveWindow(const Board& b, Player p, Hex c) {
+  for (const Hex d : six::kAxes) {
+    for (int k = 0; k < six::kWinLength; ++k) {
+      bool mine = false;
+      bool theirs = false;
+      for (int i = 0; i < six::kWinLength; ++i) {
+        const Player at = b.at({c.q + d.q * (i - k), c.r + d.r * (i - k)});
+        mine = mine || at == p;
+        theirs = theirs || at == six::other(p);
+      }
+      if (mine && !theirs) return true;
+    }
+  }
+  return false;
+}
+
 /**
  * True if the side to move provably wins within `turns` turns. Attacking turns come from a fresh
  * solver; every block is found by brute force, and a block that isn't complete loses on the spot.
  */
-bool verifyWin(Board& b, int turns, std::string& why) {
+bool verifyWin(Board& b, int turns, std::string& why, bool wide = false) {
   const Player me = b.current();
   const Player opp = six::other(me);
   if (b.threatCount(me) > 0) return true;  // two stones finish a window holding four
@@ -113,6 +130,7 @@ bool verifyWin(Board& b, int turns, std::string& why) {
     return false;
   }
   six::ThreatSolver solver(1);
+  solver.setWide(wide);
   const auto win = solver.solve(b, turns, 2'000'000);
   if (!win.found) {
     why = "solver found no win in a position it had proven";
@@ -132,7 +150,7 @@ bool verifyWin(Board& b, int turns, std::string& why) {
     for (const auto& [x, y] : bruteCoveringPairs(b, me)) {
       b.place({x.first, x.second});
       b.place({y.first, y.second});
-      ok = verifyWin(b, turns - 1, why);
+      ok = verifyWin(b, turns - 1, why, wide);
       b.undo();
       b.undo();
       if (!ok) break;
@@ -194,6 +212,81 @@ TEST_CASE("threats: double-threat turns match brute force on random positions") 
   }
   CHECK(positions >= 30);
   CHECK(found > 50);
+}
+
+TEST_CASE("threats: wide turns are every double threat with both stones in live windows") {
+  std::mt19937 rng(3141);
+  int positions = 0;
+  int freeStones = 0;
+  for (int round = 0; round < 30; ++round) {
+    Board b = randomQuietPosition(rng, 12 + round % 14);
+    if (b.stonesLeft() != 2 || !quiet(b)) continue;
+    ++positions;
+    const Player me = b.current();
+    std::vector<six::ThreatTurn> turns;
+    six::doubleThreats(b, turns, true);
+    std::map<PairKey, int> generated;
+    for (const auto& t : turns) {
+      if (!generated.emplace(keyOf(t.a, t.b), t.cover).second) six::testing::fail(__FILE__, __LINE__, "turn generated twice");
+    }
+    std::vector<Hex> cells;
+    for (const Hex c : nearEmpties(b, 5)) {
+      if (inLiveWindow(b, me, c)) cells.push_back(c);
+    }
+    std::size_t matched = 0;
+    for (std::size_t i = 0; i < cells.size(); ++i) {
+      b.place(cells[i]);
+      for (std::size_t j = i + 1; j < cells.size(); ++j) {
+        b.place(cells[j]);
+        const auto threats = six::threatWindows(b, me);
+        const int cover = threats.empty() ? 0 : six::minCover(b, threats, 2);
+        const bool bothInFours =
+            std::any_of(threats.begin(), threats.end(), [&](const auto& w) { return windowHolds(w, cells[i]); }) &&
+            std::any_of(threats.begin(), threats.end(), [&](const auto& w) { return windowHolds(w, cells[j]); });
+        b.undo();
+        const auto it = generated.find(keyOf(cells[i], cells[j]));
+        if (it != generated.end()) {
+          ++matched;
+          if (it->second != cover) {
+            six::testing::fail(__FILE__, __LINE__,
+                               "cover " + std::to_string(it->second) + " generated, brute force says " + std::to_string(cover) +
+                                   " for " + describe(cells[i]) + " " + describe(cells[j]));
+          }
+          if (!bothInFours) ++freeStones;
+        } else if (cover >= 2) {
+          six::testing::fail(__FILE__, __LINE__,
+                             "wide mode missed a double threat (cover " + std::to_string(cover) + ") at " +
+                                 describe(cells[i]) + " " + describe(cells[j]));
+        }
+      }
+      b.undo();
+    }
+    CHECK_EQ(matched, generated.size());
+  }
+  CHECK(positions >= 20);
+  CHECK(freeStones > 0);
+}
+
+TEST_CASE("threats: in wide mode three in a row wins with its owner to move") {
+  // The win starts with a stone off the line that no four uses yet, which the engine's narrower search leaves out.
+  Board b(8);
+  const std::vector<Hex> order = {{0, 0}, {25, -25}, {32, -25}, {0, 1}, {0, 2}, {39, -25}, {46, -25}};
+  for (std::size_t i = 0; i < order.size(); ++i) {
+    b.setSearchMode(six::playerForStone(static_cast<int>(i)) == Player::O);
+    CHECK(b.place(order[i]) == PlaceError::None);
+  }
+  b.setSearchMode(false);
+  CHECK(b.current() == Player::X);
+  six::ThreatSolver solver(64);
+  solver.setWide(true);
+  const auto win = solver.solve(b, 6, 50'000'000);
+  std::cerr << "  (three in a row: " << (win.found ? std::to_string(win.turns) + "-turn win" : std::string("no win"))
+            << " in " << win.nodes << " nodes)\n";
+  CHECK(win.found);
+  std::string why;
+  if (win.found && !verifyWin(b, win.turns, why, true)) {
+    six::testing::fail(__FILE__, __LINE__, "claimed win failed: " + why);
+  }
 }
 
 TEST_CASE("threats: covering pairs match brute force") {

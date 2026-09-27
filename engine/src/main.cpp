@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
         if (std::string(argv[j]) == "--webgpu") device = six::Device::WebGpu;
       }
       try {
-        evaluator = std::make_unique<six::Evaluator>(argv[i + 1], device);
+        evaluator = std::make_unique<six::Evaluator>(argv[i + 1], device, true);
         mcts = std::make_unique<six::Mcts>(*evaluator);
       } catch (const std::exception& e) {
         std::cerr << "could not load the network: " << e.what() << '\n';

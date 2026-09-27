@@ -225,6 +225,30 @@ export async function generationNetwork(
   return onnx;
 }
 
+// Set once a network engine dies while starting on the graphics card (a driver fault it can't recover from itself).
+// From then on the network runs on the CPU.
+let netOnCpu = false;
+
+function netArgs(net: string): string[] {
+  if (netOnCpu) return ['--net', net, '--cpu'];
+  return ['--net', net, ...(existsSync(path.join(TENSORRT_DLLS, 'nvinfer_10.dll')) ? ['--trt'] : [])];
+}
+
+// Runs a request on a network engine; if that engine couldn't start, once more with the network on the CPU.
+async function onNetwork<T>(engineFor: () => EngineProcess, run: (engine: EngineProcess) => Promise<T>): Promise<T> {
+  const first = engineFor();
+  try {
+    return await run(first);
+  } catch (error) {
+    if (netOnCpu || !first.failedToStart) throw error;
+    netOnCpu = true;
+    console.error('Six could not start on the graphics card, so it runs on the CPU from now on.');
+    for (const e of netEngines.values()) e.close();
+    netEngines.clear();
+    return run(engineFor());
+  }
+}
+
 // Keeps two engines loaded so a game between two generations doesn't reload one every turn (LRU eviction).
 function networkEngine(chosen?: string): EngineProcess {
   const net = chosen ?? newestNetwork();
@@ -239,8 +263,7 @@ function networkEngine(chosen?: string): EngineProcess {
       netEngines.delete(oldest);
     }
     const env = { ...process.env, PATH: [CUDA_DLLS, TENSORRT_DLLS, process.env.PATH ?? ''].join(path.delimiter) };
-    const trt = existsSync(path.join(TENSORRT_DLLS, 'nvinfer_10.dll')) ? ['--trt'] : [];
-    entry = new EngineProcess(ENGINE_EXE, ['--net', net, ...trt], env, [], NET_IDLE_CLOSE_MS);
+    entry = new EngineProcess(ENGINE_EXE, netArgs(net), env, [], NET_IDLE_CLOSE_MS);
   }
   netEngines.set(net, entry);
   return entry;
@@ -252,7 +275,7 @@ export const EVAL_MOVETIME_MS = 1600;
 // The solver gets about a quarter of the judging time (400 ms).
 const EVAL_SETUP = ['setoption rootThreatNodes 3000000'];
 // Separate process so judging never waits on (or disturbs) a bot's search.
-let evalEngine: { path: string | null; process: EngineProcess } | null = null;
+let evalEngine: { key: string; process: EngineProcess } | null = null;
 
 // Judged by Six on the newest network if there is one, else by Six Classic.
 export async function evaluatePosition(moves: Array<[number, number]>, radius: number, keep = false): Promise<Evaluation & { engine: 'six' | 'classic' }> {
@@ -295,8 +318,8 @@ async function judge(moves: Array<[number, number]>, radius: number): Promise<Ev
   const hexes = moves.map(([q, r]) => ({ q, r }));
   const game = Game.fromMoves(hexes, radius);
   if (game.winner) return { winX: game.winner === 'X' ? 1 : 0, proven: game.winner, engine: newestNetwork() ? 'six' : 'classic' };
-  const { process: judgeProcess, net } = judgeEngine();
-  const { score } = await judgeProcess.search(hexes, radius, EVAL_MOVETIME_MS);
+  const { net } = judgeEngine();
+  const { score } = await onNetwork(() => judgeEngine().process, (e) => e.search(hexes, radius, EVAL_MOVETIME_MS));
   if (score === null) throw new Error('The engine gave no evaluation.');
   const engine = net ? 'six' : 'classic';
   return { ...evaluationFromScore(score, game.current, engine), engine };
@@ -305,14 +328,14 @@ async function judge(moves: Array<[number, number]>, radius: number): Promise<Ev
 function judgeEngine(): { process: EngineProcess; net: string | null } {
   if (!hexbotAvailable()) throw new Error('The engine has not been built yet.');
   const net = newestNetwork();
-  if (evalEngine?.path !== net) {
+  const args = net ? netArgs(net) : [];
+  if (evalEngine?.key !== args.join(' ')) {
     evalEngine?.process.close();
     const env = { ...process.env, PATH: [CUDA_DLLS, TENSORRT_DLLS, process.env.PATH ?? ''].join(path.delimiter) };
-    const trt = existsSync(path.join(TENSORRT_DLLS, 'nvinfer_10.dll')) ? ['--trt'] : [];
     evalEngine = {
-      path: net,
+      key: args.join(' '),
       process: net
-        ? new EngineProcess(ENGINE_EXE, ['--net', net, ...trt], env, EVAL_SETUP, NET_IDLE_CLOSE_MS)
+        ? new EngineProcess(ENGINE_EXE, args, env, EVAL_SETUP, NET_IDLE_CLOSE_MS)
         : new EngineProcess(ENGINE_EXE, [], undefined, EVAL_SETUP),
     };
   }
@@ -337,8 +360,8 @@ export async function reviewPosition(moves: Array<[number, number]>, radius: num
   const key = `${radius}|${movetimeMs}|${newestNetwork() ?? ''}|${moves.join(' ')}`;
   const known = reviewCache.get(key);
   if (known) return known;
-  const { process: judgeProcess, net } = judgeEngine();
-  const { cells, score } = await judgeProcess.search(hexes, radius, movetimeMs);
+  const { net } = judgeEngine();
+  const { cells, score } = await onNetwork(() => judgeEngine().process, (e) => e.search(hexes, radius, movetimeMs));
   if (score === null) throw new Error('The engine gave no evaluation.');
   const evaluation = evaluationFromScore(score, game.current, net ? 'six' : 'classic');
   const proven = evaluation.proven ?? (await provenWinner(moves, radius));
@@ -440,10 +463,12 @@ export async function botTurn(req: BotTurnRequest): Promise<Hex[]> {
   if (req.bot === 'hexweb') throw new Error('Six (browser) plays in the browser, not on the server.');
   if (req.bot === 'hexbot' || req.bot === 'hexnet') {
     const chosen = req.bot === 'hexnet' && req.generation !== undefined ? await generationNetwork(req.generation) : undefined;
-    const process_ = req.bot === 'hexnet' ? networkEngine(chosen) : (engine ??= new EngineProcess(ENGINE_EXE));
+    const movetime = HEXBOT_MOVETIME_MS[req.level - 1]!;
     // Training pauses while someone plays HexBot and resumes a few minutes after.
     markBotGame(RUNS_RL);
-    const cells = await process_.bestTurn(hexes, req.radius, HEXBOT_MOVETIME_MS[req.level - 1]!);
+    const cells = req.bot === 'hexnet'
+      ? await onNetwork(() => networkEngine(chosen), (e) => e.bestTurn(hexes, req.radius, movetime))
+      : await (engine ??= new EngineProcess(ENGINE_EXE)).bestTurn(hexes, req.radius, movetime);
     markBotGame(RUNS_RL);
     // Check the engine's moves against our own rules.
     const probe = game.clone();

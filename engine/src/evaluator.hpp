@@ -24,12 +24,14 @@ class NetworkEvaluator {
 
 // TensorRt builds fp16 engines, cached beside the model on first use, and falls back to CUDA per node.
 // DirectMl needs a SIX_DML build. WebGpu needs the ONNX Runtime WebGPU plugin next to the executable (Vulkan on
-// Linux, so AMD, Intel and NVIDIA cards all work); Cuda falls back to it, then to the CPU.
+// Linux, so AMD, Intel and NVIDIA cards all work). A device that can't load or run the network falls back to WebGPU,
+// then to the CPU.
 enum class Device { Cpu, Cuda, TensorRt, DirectMl, WebGpu };
 
 class Evaluator : public NetworkEvaluator {
  public:
-  Evaluator(const std::string& onnxPath, Device device);
+  // On the CPU, one thread unless `allCores` (a fallback from a graphics card always uses every core).
+  Evaluator(const std::string& onnxPath, Device device, bool allCores = false);
   ~Evaluator() override;
   Evaluator(const Evaluator&) = delete;
   Evaluator& operator=(const Evaluator&) = delete;

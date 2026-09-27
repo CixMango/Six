@@ -1,10 +1,15 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type ComponentType, type FormEvent } from 'react';
 import { Pause, Play, X } from 'lucide-react';
 import { ChannelBug } from '../components/Broadcast.tsx';
 import { api, type Bout, type GenerationRecord, type RivalResult, type TrainingView } from '../lib/api.ts';
 import { boutVerdict, describeAge, describeOurSide, describeShape, extraBouts, intervalSentence, loopState, rivalOutcome, rowLeader, signedElo, tapeRows, type LoopState } from '../lib/trainingView.ts';
 
 const POLL_MS = 15_000;
+
+// Extra panels kept on this PC only, in src/client/local/ (not part of the app itself).
+const LOCAL_PANELS = Object.values(import.meta.glob<{ default: ComponentType }>('../local/*.tsx', { eager: true })).map(
+  (m) => m.default,
+);
 /** The interval bar spans -SCALE to +SCALE Elo. */
 const SCALE = 400;
 
@@ -375,6 +380,10 @@ export function TrainingScreen() {
             </p>
           )}
         </header>
+
+        {LOCAL_PANELS.map((Panel, i) => (
+          <Panel key={i} />
+        ))}
 
         {loadError && <p className="error-text">Training status could not load: {loadError}</p>}
 

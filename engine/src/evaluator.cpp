@@ -55,8 +55,8 @@ std::filesystem::path executableDir() {
 #endif
 }
 
-// Registers the WebGPU plugin shipped next to the executable and adds its device to `options`.
-bool appendWebGpu(Ort::Env& env, Ort::SessionOptions& options) {
+// Registers the WebGPU plugin shipped next to the executable (once) and adds its device to `options`.
+bool appendWebGpu(Ort::Env& env, bool& registered, Ort::SessionOptions& options) {
 #ifdef _WIN32
   const auto library = executableDir() / "onnxruntime_providers_webgpu.dll";
 #elif defined(__APPLE__)
@@ -66,7 +66,8 @@ bool appendWebGpu(Ort::Env& env, Ort::SessionOptions& options) {
 #endif
   if (!std::filesystem::exists(library)) return false;
   try {
-    env.RegisterExecutionProviderLibrary("webgpu_ep", library.native());
+    if (!registered) env.RegisterExecutionProviderLibrary("webgpu_ep", library.native());
+    registered = true;
     // The macOS build also has WebGPU built in under the same name, and two providers' devices can't be mixed:
     // take just the first WebGPU device.
     std::vector<Ort::ConstEpDevice> devices;
@@ -94,12 +95,17 @@ bool appendWebGpu(Ort::Env& env, Ort::SessionOptions& options) {
 }  // namespace
 
 struct Evaluator::Impl {
-  Ort::Env env{ORT_LOGGING_LEVEL_WARNING, "sixengine"};
+  // Warnings (nodes placed on the CPU, PCI paths it can't parse) are harmless and only worry players.
+  Ort::Env env{ORT_LOGGING_LEVEL_ERROR, "sixengine"};
   Ort::Session session{nullptr};
   Ort::MemoryInfo memory = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+  bool webGpuRegistered = false;
+
+  // Loads the network on one device; false if that device isn't there to try.
+  bool open(const std::string& onnxPath, Device device, bool allCores);
 };
 
-Evaluator::Evaluator(const std::string& onnxPath, Device device) : impl_(std::make_unique<Impl>()) {
+bool Evaluator::Impl::open(const std::string& onnxPath, Device device, bool allCores) {
   Ort::SessionOptions options;
   options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
   if (device == Device::TensorRt) {
@@ -123,14 +129,13 @@ Evaluator::Evaluator(const std::string& onnxPath, Device device) : impl_(std::ma
     try {
       Ort::ThrowOnError(Ort::GetApi().CreateCUDAProviderOptions(&cuda));
       options.AppendExecutionProvider_CUDA_V2(*cuda);
-    } catch (const Ort::Exception& e) {
-      // No usable CUDA (an AMD or Intel card, or no CUDA libraries): try WebGPU, then every CPU core.
-      std::cerr << "CUDA is not available: " << e.what() << '\n';
-      if (!appendWebGpu(impl_->env, options)) std::cerr << "using the CPU\n";
+    } catch (...) {
+      if (cuda) Ort::GetApi().ReleaseCUDAProviderOptions(cuda);
+      throw;
     }
-    if (cuda) Ort::GetApi().ReleaseCUDAProviderOptions(cuda);
+    Ort::GetApi().ReleaseCUDAProviderOptions(cuda);
   } else if (device == Device::WebGpu) {
-    if (!appendWebGpu(impl_->env, options)) std::cerr << "using the CPU\n";
+    if (!appendWebGpu(env, webGpuRegistered, options)) return false;
   } else if (device == Device::DirectMl) {
 #ifdef SIX_DML
     // DirectML can't use memory patterns or parallel execution; batches all come from one thread anyway.
@@ -140,14 +145,33 @@ Evaluator::Evaluator(const std::string& onnxPath, Device device) : impl_(std::ma
 #else
     throw std::runtime_error("this engine was built without DirectML");
 #endif
-  } else {
+  } else if (!allCores) {
     options.SetIntraOpNumThreads(1);
   }
-  impl_->session = Ort::Session(impl_->env, modelPath(onnxPath).c_str(), options);
-  // The first runs set up CUDA and pick kernels, which takes far longer than a search can wait: do them now.
-  std::vector<float> planes(static_cast<std::size_t>(kPlaneCount) * kCropCells, 0.0f);
-  std::vector<NetOutput> out(1);
-  for (int i = 0; i < 3; ++i) evaluate(planes.data(), 1, out.data());
+  session = Ort::Session(env, modelPath(onnxPath).c_str(), options);
+  return true;
+}
+
+Evaluator::Evaluator(const std::string& onnxPath, Device device, bool allCores) : impl_(std::make_unique<Impl>()) {
+  // A graphics card or driver that can't run the network falls back to WebGPU, then to every CPU core.
+  std::vector<Device> order{device};
+  if (device != Device::WebGpu && device != Device::Cpu) order.push_back(Device::WebGpu);
+  if (device != Device::Cpu) order.push_back(Device::Cpu);
+  const char* names[] = {"the CPU", "CUDA", "TensorRT", "DirectML", "WebGPU"};
+  for (std::size_t i = 0; i < order.size(); ++i) {
+    try {
+      if (!impl_->open(onnxPath, order[i], allCores || device != Device::Cpu)) continue;
+      // The first runs set up the device and pick kernels, which takes far longer than a search can wait: do them now.
+      std::vector<float> planes(static_cast<std::size_t>(kPlaneCount) * kCropCells, 0.0f);
+      std::vector<NetOutput> out(1);
+      for (int k = 0; k < 3; ++k) evaluate(planes.data(), 1, out.data());
+      if (order[i] == Device::Cpu && device != Device::Cpu) std::cerr << "using the CPU\n";
+      return;
+    } catch (const std::exception& e) {
+      if (i + 1 == order.size()) throw;
+      std::cerr << names[static_cast<int>(order[i])] << " could not run the network: " << e.what() << '\n';
+    }
+  }
 }
 
 Evaluator::~Evaluator() = default;

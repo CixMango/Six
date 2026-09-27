@@ -1,5 +1,7 @@
 #include "threats.hpp"
 
+#include <limits>
+
 #include <algorithm>
 #include <array>
 #include <stdexcept>
@@ -85,7 +87,7 @@ void addThreeFours(Scratch& s, std::int32_t cell, std::int32_t other, std::int32
 
 }  // namespace
 
-void doubleThreats(const Board& board, std::vector<ThreatTurn>& out) {
+void doubleThreats(const Board& board, std::vector<ThreatTurn>& out, bool wide) {
   out.clear();
   const Player me = board.current();
   if (board.winner() != Player::None || board.stonesLeft() != 2 || board.threatCount(me) > 0) return;
@@ -137,7 +139,7 @@ void doubleThreats(const Board& board, std::vector<ThreatTurn>& out) {
 
   // Candidates. Every new four either had three stones and gains one, or had two and gains both.
   s.candidates.clear();
-  const std::size_t pairable = std::min(s.threeCells.size(), kMaxThreeCells);
+  const std::size_t pairable = wide ? s.threeCells.size() : std::min(s.threeCells.size(), kMaxThreeCells);
   for (std::size_t i = 0; i < pairable; ++i) {
     for (std::size_t j = i + 1; j < pairable; ++j) s.candidates.push_back(pairKey(s.threeCells[i], s.threeCells[j]));
   }
@@ -151,7 +153,38 @@ void doubleThreats(const Board& board, std::vector<ThreatTurn>& out) {
     i = j;
   }
   // A stone whose own fours already need two blockers leaves the second stone free: use it to start new threes.
-  if (!s.twoCells.empty()) {
+  if (wide) {
+    // Free stones anywhere they join a live window: the empties of every window with a stone of ours and none of theirs.
+    s.partners.clear();
+    const Player opp = other(me);
+    const auto& moves = board.moves();
+    for (int i = 0; i < static_cast<int>(moves.size()); ++i) {
+      if (playerForStone(i) != me) continue;
+      const Hex stone = moves[static_cast<std::size_t>(i)];
+      for (int axis = 0; axis < 3; ++axis) {
+        const Hex d = kAxes[static_cast<std::size_t>(axis)];
+        for (int k = 0; k < kWinLength; ++k) {
+          const Hex start{stone.q - d.q * k, stone.r - d.r * k};
+          if (board.windowCount(axis, start, opp) > 0) continue;
+          for (int j = 0; j < kWinLength; ++j) {
+            const Hex c{start.q + d.q * j, start.r + d.r * j};
+            if (board.at(c) == Player::None) s.partners.push_back({0, board.cellIndex(c)});
+          }
+        }
+      }
+    }
+    std::sort(s.partners.begin(), s.partners.end());
+    s.partners.erase(std::unique(s.partners.begin(), s.partners.end()), s.partners.end());
+    s.partners.erase(std::remove_if(s.partners.begin(), s.partners.end(), [&](const auto& p) { return isThreeCell(p.second); }),
+                     s.partners.end());
+    for (std::size_t i = 0; i < pairable; ++i) {
+      const std::int32_t a = s.threeCells[i];
+      s.fours.clear();
+      addThreeFours(s, a, -1, -1);
+      if (coverOf(s.fours.data(), s.fours.size()) < 2) continue;
+      for (const auto& p : s.partners) s.candidates.push_back(pairKey(a, p.second));
+    }
+  } else if (!s.twoCells.empty()) {
     std::sort(s.twoCells.begin(), s.twoCells.end());
     s.partners.clear();
     for (std::size_t i = 0; i < s.twoCells.size();) {
@@ -254,6 +287,7 @@ struct ThreatSolver::Impl {
   std::vector<std::vector<std::pair<Hex, Hex>>> defenses;
   std::int64_t nodes = 0;
   std::int64_t budget = 0;
+  bool wide = false;
   std::chrono::steady_clock::time_point deadline;
   bool aborted = false;
   Hex rootA;
@@ -287,7 +321,7 @@ struct ThreatSolver::Impl {
     const Player me = board.current();
     const Player opp = other(me);
     auto& turns = attacks[static_cast<std::size_t>(ply)];
-    doubleThreats(board, turns);
+    doubleThreats(board, turns, wide);
     int proven = 0;
     Hex bestA;
     Hex bestB;
@@ -350,6 +384,91 @@ struct ThreatSolver::Impl {
     }
     return proven;
   }
+
+  void addFours(const Board& board, Player attacker, std::vector<Hex>& cells) {
+    board.forEachThreatIndex(attacker, [&](int axis, int start) {
+      for (int i = 0; i < kWinLength; ++i) {
+        const int idx = start + i * Board::kAxisStep[static_cast<std::size_t>(axis)];
+        if (board.atIndex(idx) == Player::None) cells.push_back(board.cellAt(idx));
+      }
+    });
+  }
+
+  /** Mirrors attack() for a position already known to be won, building the proof and recording its cells. */
+  bool collect(Board& board, int turnsLeft, ThreatSolver::Proof& node, std::vector<Hex>& cells) {
+    const Player me = board.current();
+    const Player opp = other(me);
+    std::vector<ThreatTurn> turns;
+    doubleThreats(board, turns, wide);
+    for (const ThreatTurn& t : turns) {
+      if (t.cover >= 3 && placeable(board, t.a, t.b)) {
+        board.place(t.a);
+        board.place(t.b);
+        cells.push_back(t.a);
+        cells.push_back(t.b);
+        addFours(board, me, cells);
+        board.undo();
+        board.undo();
+        node = ThreatSolver::Proof{t.a, t.b, true, {}};
+        return true;
+      }
+    }
+    if (turnsLeft <= 1) return false;
+    for (const ThreatTurn& t : turns) {
+      if (board.place(t.a) != PlaceError::None) continue;
+      if (board.place(t.b) != PlaceError::None) {
+        board.undo();
+        continue;
+      }
+      std::vector<std::pair<Hex, Hex>> replies;
+      coveringPairs(board, me, replies);
+      bool wins = !replies.empty();
+      for (std::size_t r = 0; r < replies.size() && wins; ++r) {
+        if (board.place(replies[r].first) != PlaceError::None) {
+          wins = false;
+          break;
+        }
+        if (board.place(replies[r].second) != PlaceError::None) {
+          board.undo();
+          wins = false;
+          break;
+        }
+        wins = board.threatCount(opp) == 0 && attack(board, turnsLeft - 1, 1) > 0;
+        board.undo();
+        board.undo();
+      }
+      if (wins) {
+        const std::size_t mark = cells.size();
+        cells.push_back(t.a);
+        cells.push_back(t.b);
+        addFours(board, me, cells);
+        ThreatSolver::Proof built{t.a, t.b, false, {}};
+        for (const auto& [x, y] : replies) {
+          board.place(x);
+          board.place(y);
+          ThreatSolver::Proof child;
+          const bool ok = collect(board, turnsLeft - 1, child, cells);
+          board.undo();
+          board.undo();
+          if (!ok) {
+            wins = false;
+            break;
+          }
+          built.blocks.push_back({{x, y}, std::move(child)});
+        }
+        if (wins) {
+          board.undo();
+          board.undo();
+          node = std::move(built);
+          return true;
+        }
+        cells.resize(mark);
+      }
+      board.undo();
+      board.undo();
+    }
+    return false;
+  }
 };
 
 ThreatSolver::ThreatSolver(int ttMegabytes) : impl_(new Impl(ttMegabytes)) {}
@@ -357,6 +476,101 @@ ThreatSolver::ThreatSolver(int ttMegabytes) : impl_(new Impl(ttMegabytes)) {}
 ThreatSolver::~ThreatSolver() { delete impl_; }
 
 void ThreatSolver::clear() { std::fill(impl_->table.begin(), impl_->table.end(), Impl::Entry{}); }
+
+void ThreatSolver::setWide(bool on) {
+  // Table entries from the other mode would claim the wrong "searched, nothing found".
+  if (impl_->wide != on) clear();
+  impl_->wide = on;
+}
+
+bool ThreatSolver::proofTree(Board& board, int maxTurns, std::int64_t nodeBudget, Proof& proof, std::vector<Hex>& cells) {
+  cells.clear();
+  const ThreatWin w = solve(board, maxTurns, nodeBudget);
+  if (!w.found || w.exhausted) return false;
+  Impl& s = *impl_;
+  s.budget = std::numeric_limits<std::int64_t>::max();
+  s.deadline = std::chrono::steady_clock::time_point::max();
+  s.aborted = false;
+  if (s.attacks.size() < static_cast<std::size_t>(w.turns) + 2) {
+    s.attacks.resize(static_cast<std::size_t>(w.turns) + 2);
+    s.defenses.resize(static_cast<std::size_t>(w.turns) + 2);
+  }
+  if (!s.collect(board, w.turns, proof, cells)) {
+    cells.clear();
+    return false;
+  }
+  std::sort(cells.begin(), cells.end(), [](Hex a, Hex b) { return a.q != b.q ? a.q < b.q : a.r < b.r; });
+  cells.erase(std::unique(cells.begin(), cells.end()), cells.end());
+  return true;
+}
+
+namespace {
+
+// Whether one stone blocks every four of `attacker`: then the defender has a free stone to use anywhere.
+bool oneStoneBlocks(const Board& board, Player attacker) {
+  std::vector<std::vector<std::int32_t>> fours;
+  board.forEachThreatIndex(attacker, [&](int axis, int start) {
+    std::vector<std::int32_t> empties;
+    for (int i = 0; i < kWinLength; ++i) {
+      const int idx = start + i * Board::kAxisStep[static_cast<std::size_t>(axis)];
+      if (board.atIndex(idx) == Player::None) empties.push_back(idx);
+    }
+    fours.push_back(empties);
+  });
+  if (fours.empty()) return false;
+  for (const std::int32_t c : fours.front()) {
+    if (std::all_of(fours.begin(), fours.end(), [&](const auto& f) { return std::find(f.begin(), f.end(), c) != f.end(); })) {
+      return true;
+    }
+  }
+  return false;
+}
+
+}  // namespace
+
+bool ThreatSolver::replay(Board& board, const Proof& proof) {
+  const Player me = board.current();
+  const Player opp = other(me);
+  if (board.stonesLeft() != 2 || board.threatCount(opp) > 0) return false;
+  if (board.threatCount(me) > 0) return true;  // six next stone
+  if (board.place(proof.a) != PlaceError::None) return false;
+  if (board.place(proof.b) != PlaceError::None) {
+    board.undo();
+    return false;
+  }
+  bool ok = board.threatCount(me) > 0;
+  std::vector<std::pair<Hex, Hex>> blocks;
+  if (ok) coveringPairs(board, me, blocks);
+  if (ok && !blocks.empty()) {
+    // The tree says unblockable but here it can be blocked, or one stone blocks and the other is free.
+    if (proof.last || oneStoneBlocks(board, me)) ok = false;
+    for (std::size_t i = 0; i < blocks.size() && ok; ++i) {
+      const auto [x, y] = blocks[i];
+      const Proof* next = nullptr;
+      for (const auto& [pair, child] : proof.blocks) {
+        if ((pair.first == x && pair.second == y) || (pair.first == y && pair.second == x)) {
+          next = &child;
+          break;
+        }
+      }
+      if (!next || board.place(x) != PlaceError::None) {
+        ok = false;
+        break;
+      }
+      if (board.place(y) != PlaceError::None) {
+        board.undo();
+        ok = false;
+        break;
+      }
+      ok = board.threatCount(opp) == 0 && replay(board, *next);
+      board.undo();
+      board.undo();
+    }
+  }
+  board.undo();
+  board.undo();
+  return ok;
+}
 
 ThreatWin ThreatSolver::solve(Board& board, int maxTurns, std::int64_t nodeBudget, std::chrono::steady_clock::time_point deadline) {
   Impl& s = *impl_;

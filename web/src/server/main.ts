@@ -1,7 +1,8 @@
 import { createReadStream } from 'node:fs';
-import { readFile, stat, writeFile } from 'node:fs/promises';
+import { readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import http, { type IncomingMessage, type ServerResponse } from 'node:http';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { parseClientMessage, type ServerMessage } from '../shared/protocol.ts';
 import { validateReplay } from '../shared/replay.ts';
@@ -51,6 +52,16 @@ const rooms = new RoomManager({
 });
 const training = new TrainingStatus(RUNS_DIR);
 
+// Extra routes kept on this PC only, in src/server/local/ (not part of the app itself).
+type LocalRoute = (route: string, res: ServerResponse) => Promise<boolean>;
+const localRoutes: LocalRoute[] = [];
+const LOCAL_DIR = path.join(import.meta.dirname, 'local');
+for (const file of await readdir(LOCAL_DIR).catch(() => [] as string[])) {
+  if (!file.endsWith('.ts')) continue;
+  const mod = (await import(pathToFileURL(path.join(LOCAL_DIR, file)).href)) as { handle?: LocalRoute };
+  if (mod.handle) localRoutes.push(mod.handle);
+}
+
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
   const text = JSON.stringify(body);
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
@@ -81,6 +92,7 @@ function info() {
 async function api(req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> {
   const route = `${req.method} ${url.pathname}`;
   try {
+    for (const local of localRoutes) if (await local(route, res)) return;
     if (route === 'GET /api/info') return sendJson(res, 200, info());
     if (route === 'GET /api/bots') return sendJson(res, 200, availableBots());
     if (route === 'GET /api/generations') {
