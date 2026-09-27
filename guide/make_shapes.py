@@ -1355,8 +1355,9 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
              "they're within 2 cells (at most 2 steps across the grid) or on one line within 4 (so they share a window "
              "of six with room to spare); rotations and mirror images count as the same shape. The **lines** of a shape "
              "are the lines through two or more of its stones. Replies within 3 cells were tried for **holds**; holding "
-             "stops the forced win, it doesn't make the position safe. **Open space** means no other stones nearby: "
-             "every shape here was checked alone on the board. **Two-stone** and **one-stone** threes and **close "
+             "stops the forced win, it doesn't make the position safe. **Open space** means the shape is alone on the "
+             "board: no other stones nearby, and no threats of the defender's anywhere. That second part matters for "
+             "non-forced wins (below). **Two-stone** and **one-stone** threes and **close "
              "pairs** are defined below.", "", "</details>", "",
              "**On this page:** [In short](#in-short) · [Using this in a game](#using-this-in-a-game) · "
              "[Fours](#fours) · [Close pairs](#close-pairs) · [Cheat sheet](#cheat-sheet) · [Attacking](#attacking) · "
@@ -1378,8 +1379,9 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
              "- **Close pair** (two stones within 2 cells, or 3 apart on one line) → **needs an answer too: your stones "
              "near it.** In open space, two more stones make any close pair unstoppable.",
              f"- **{len(unified)} unstoppable shapes** win even when the opponent moves first, in open space. The smallest "
-             "is **three in a row**: nothing stops it once it has room around it. So in open space a free turn wins from "
-             "almost anything, which is why games stay crowded: never give the opponent a free turn where they have room.",
+             "is **three in a row**: nothing stops it once it has room around it, unless the defender has a threat of "
+             "their own somewhere (a three one stone from a four) to win the tempo back. So never give the opponent a "
+             "free turn where they have room, and keep a three of your own on the board as insurance.",
              "",
              "## Using this in a game", "",
              "Each turn, in this order:", "",
@@ -1606,7 +1608,8 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
               "- **Keep fours coming.** A four that takes both stones every turn leaves the opponent no time, as in the "
               "worked example below.",
               *([f"- **Make three in a row where there's room.** It's must-answer, and in open space it wins even after "
-                 f"the opponent answers it ({u_canon[canonical([(0, 0), (0, 1), (0, 2)])]})."]
+                 f"the opponent answers it ({u_canon[canonical([(0, 0), (0, 1), (0, 2)])]}), as long as they have no three "
+                 "of their own to counter with."]
                 if canonical([(0, 0), (0, 1), (0, 2)]) in u_canon else []),
               "- **Three in a window plus one.** Three of your stones in one window of six with a fourth stone outside that "
               "window (on the same line or off it) "
@@ -1665,8 +1668,10 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
               f"{tried_hi:,} of them) and none holds. Easy to play once you see it, and the defender never gets a free stone.",
               f"- **Non-forced win** ({by_kind['quiet']}): against some defences the owner needs a quiet move. Proven "
               "by checking every defender reply after each of the owner's turns, with Six "
-              "suggesting those turns. Harder to play, and more fragile in a crowded game: the quiet move hands the "
-              "defender a free turn.",
+              "suggesting those turns. Harder to play, and far more fragile: each quiet move hands the defender a free "
+              "turn, and a defender with a three of their own anywhere on the board (one stone from a four) can spend it "
+              "on a four and win the tempo back. So these hold only when the defender has no such threat. Forced wins "
+              "don't have that weakness: every turn takes both of the defender's stones.",
               f"- **Proven by containing one** ({by_kind['contains']}): proven only because it contains a smaller "
               "unstoppable shape (your own extra stones never hurt). Shapes in the other two groups can contain one too; "
               "their tag says so.", ""]
@@ -1729,8 +1734,9 @@ def main(paths, unstoppable_path=None, lines_path=None, pairblock_path=None, sur
     lines += quiz(tight, loose, in_window, a_label, refutes, reach, rows, cells_of, needed, u_canon,
                   lambda sh: u_ref(smaller_inside(sh)) if smaller_inside(sh) else None)
     lines += ["## What this doesn't cover", "",
-              "- **Shapes near other stones.** Every shape here stands alone. In a real game the opponent's own threats "
-              "(a counter-four while defending) and other stones change things.",
+              "- **Shapes near other stones, and the defender's own threats.** Every shape here stands alone. In a real "
+              "game other stones change things, and the defender's threats anywhere on the board count: a three that one "
+              "stone turns into a four can break a non-forced win (a forced win never gives them the free stone for it).",
               "- **Threes that aren't must-answer.** Answering their most dangerous pair (step 6's order) with that pair's ringed "
               "cells is a rule of thumb; the solver check covered pairs on their own, not inside a three.",
               *([f"- **Wins the proofs couldn't finish.** A shape that isn't proven may still win: its proof stopped "

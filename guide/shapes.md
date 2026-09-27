@@ -12,7 +12,7 @@ Every small shape of one player's stones, checked by the forced-win solver in Si
 
 <details><summary>More words</summary>
 
-A **shape** is some of one player's stones with nothing else nearby; stones belong to one shape when they're within 2 cells (at most 2 steps across the grid) or on one line within 4 (so they share a window of six with room to spare); rotations and mirror images count as the same shape. The **lines** of a shape are the lines through two or more of its stones. Replies within 3 cells were tried for **holds**; holding stops the forced win, it doesn't make the position safe. **Open space** means no other stones nearby: every shape here was checked alone on the board. **Two-stone** and **one-stone** threes and **close pairs** are defined below.
+A **shape** is some of one player's stones with nothing else nearby; stones belong to one shape when they're within 2 cells (at most 2 steps across the grid) or on one line within 4 (so they share a window of six with room to spare); rotations and mirror images count as the same shape. The **lines** of a shape are the lines through two or more of its stones. Replies within 3 cells were tried for **holds**; holding stops the forced win, it doesn't make the position safe. **Open space** means the shape is alone on the board: no other stones nearby, and no threats of the defender's anywhere. That second part matters for non-forced wins (below). **Two-stone** and **one-stone** threes and **close pairs** are defined below.
 
 </details>
 
@@ -27,7 +27,7 @@ A **shape** is some of one player's stones with nothing else nearby; stones belo
 - **One-stone three** (one of your stones is enough; every other must-answer three; A9–A18) → **one stone on one of its lines, in a gap or within 2 cells of that line's stones.** The other stone isn't needed against the threats: put it on one of the ringed cells of its closest pair (see [Close pairs](#close-pairs)), or attack.
 - **Four** → **block it now**: one stone in its gap, or both ends if it's solid.
 - **Close pair** (two stones within 2 cells, or 3 apart on one line) → **needs an answer too: your stones near it.** In open space, two more stones make any close pair unstoppable.
-- **56 unstoppable shapes** win even when the opponent moves first, in open space. The smallest is **three in a row**: nothing stops it once it has room around it. So in open space a free turn wins from almost anything, which is why games stay crowded: never give the opponent a free turn where they have room.
+- **56 unstoppable shapes** win even when the opponent moves first, in open space. The smallest is **three in a row**: nothing stops it once it has room around it, unless the defender has a threat of their own somewhere (a three one stone from a four) to win the tempo back. So never give the opponent a free turn where they have room, and keep a three of your own on the board as insurance.
 
 ## Using this in a game
 
@@ -127,7 +127,7 @@ The defence map and the best holding replies for each are in the [catalogue](sha
 - **Turn a close pair into a two-stone three.** One stone does it (+ makes the triangle). The opponent must answer with both stones, and your other stone is free to build somewhere else.
 - **Four spread-out stones.** 40 shapes with no three stones in one window and no must-answer three inside are must-answer, and opponents miss them ([catalogue](shapes-catalog.md#4-stones-spread-out)).
 - **Keep fours coming.** A four that takes both stones every turn leaves the opponent no time, as in the worked example below.
-- **Make three in a row where there's room.** It's must-answer, and in open space it wins even after the opponent answers it (U1).
+- **Make three in a row where there's room.** It's must-answer, and in open space it wins even after the opponent answers it (U1), as long as they have no three of their own to counter with.
 - **Three in a window plus one.** Three of your stones in one window of six with a fourth stone outside that window (on the same line or off it) is must-answer in 10 of the 50 such shapes with no must-answer three inside (all in the catalogue). Two of them, with the winning first turn outlined:
 
 <table><tr><td align="center"><img src="shapes/s0x0_0x3_0x4_0x7_plus.svg" alt="Three plus one" width="166"><br><sub>the outlined turn builds its four through the lone stone; six on turn 6</sub></td><td align="center"><img src="shapes/s0x0_0x1_0x5_3x2_plus.svg" alt="Three plus one" width="146"><br><sub>the outlined turn fills the window to five stones, one from six; six on turn 6</sub></td></tr></table>
@@ -181,7 +181,7 @@ Blocking both ends of one line looks solid, but it leaves the triangle's other t
 56 shapes of up to 4 stones win even when the defender moves first, in open space: every two stones the defender can place within 5 cells were checked, directly or through a smaller shape inside. Each is tagged by how it wins:
 
 - **Forced win** (26): a four every turn that takes both of the defender's stones, until one turn's threats can't all be blocked. The solver tried every two-stone reply within 5 cells (about 6,000 to 10,600 of them) and none holds. Easy to play once you see it, and the defender never gets a free stone.
-- **Non-forced win** (18): against some defences the owner needs a quiet move. Proven by checking every defender reply after each of the owner's turns, with Six suggesting those turns. Harder to play, and more fragile in a crowded game: the quiet move hands the defender a free turn.
+- **Non-forced win** (18): against some defences the owner needs a quiet move. Proven by checking every defender reply after each of the owner's turns, with Six suggesting those turns. Harder to play, and far more fragile: each quiet move hands the defender a free turn, and a defender with a three of their own anywhere on the board (one stone from a four) can spend it on a four and win the tempo back. So these hold only when the defender has no such threat. Forced wins don't have that weakness: every turn takes both of the defender's stones.
 - **Proven by containing one** (12): proven only because it contains a smaller unstoppable shape (your own extra stones never hurt). Shapes in the other two groups can contain one too; their tag says so.
 
 ### Three in a row (U1)
@@ -288,7 +288,7 @@ The cheat-sheet reply for B: one stone on each of two of its lines.
 
 ## What this doesn't cover
 
-- **Shapes near other stones.** Every shape here stands alone. In a real game the opponent's own threats (a counter-four while defending) and other stones change things.
+- **Shapes near other stones, and the defender's own threats.** Every shape here stands alone. In a real game other stones change things, and the defender's threats anywhere on the board count: a three that one stone turns into a four can break a non-forced win (a forced win never gives them the free stone for it).
 - **Threes that aren't must-answer.** Answering their most dangerous pair (step 6's order) with that pair's ringed cells is a rule of thumb; the solver check covered pairs on their own, not inside a three.
 - **Wins the proofs couldn't finish.** A shape that isn't proven may still win: its proof stopped at a limit (too many defences, the time limit), as listed under [Unstoppable shapes](#unstoppable-shapes).
 - **Bigger shapes.** Every must-answer shape of up to 4 stones is on this page (the fours) or in the [catalogue](shapes-catalog.md). For 5 stones it lists the 144 minimal must-answer ones; each has a reply within 3 cells that stops its forced win, but those replies aren't listed. Nothing past 5 stones was checked.
