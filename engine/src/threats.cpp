@@ -159,7 +159,7 @@ void doubleThreats(const Board& board, std::vector<ThreatTurn>& out, bool wide) 
     const Player opp = other(me);
     const auto& moves = board.moves();
     for (int i = 0; i < static_cast<int>(moves.size()); ++i) {
-      if (playerForStone(i) != me) continue;
+      if (board.ownerOf(i) != me) continue;
       const Hex stone = moves[static_cast<std::size_t>(i)];
       for (int axis = 0; axis < 3; ++axis) {
         const Hex d = kAxes[static_cast<std::size_t>(axis)];

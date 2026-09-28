@@ -19,10 +19,11 @@ export function isTimedBot(id: BotId): boolean {
   return id !== 'rookie';
 }
 
-// e.g. "Rookie 3" or "Six 2.5 s"
-export function botName(id: BotId, level: number, generation?: number | null): string {
+// e.g. "Rookie 3", "Six 2.5 s", or "Six level 3" when Six thinks by positions
+export function botName(id: BotId, level: number, generation?: number | null, byPositions = false): string {
   const meta = BOT_META[id];
   const gen = generation != null && id === 'hexnet' ? ` gen ${generation}` : '';
+  if (byPositions) return `${meta.name}${gen} level ${level}`;
   return `${meta.name}${gen} ${meta.levelLabels[level - 1] ?? level}`;
 }
 

@@ -4,6 +4,8 @@ import type { Player } from '../../shared/rules.ts';
 import { otherPlayer, type Player as Side } from '../../shared/rules.ts';
 import { reviewGame, turnsOf, type GameReview, type PositionFacts, type Turn } from '../../shared/review.ts';
 import { api } from './api.ts';
+import type { ThinkProgress } from '../../shared/thinking.ts';
+import { useThinking } from '../components/ThinkingMeter.tsx';
 
 /** Search time per position for the quick review and for "look deeper". */
 export const QUICK_MS = 1000;
@@ -11,14 +13,21 @@ export const DEEP_MS = 5000;
 
 export type ReviewSource = 'server' | 'browser';
 
-export async function factsFor(moves: readonly Hex[], radius: number, ms: number, source: ReviewSource, signal: AbortSignal): Promise<PositionFacts> {
+export async function factsFor(
+  moves: readonly Hex[],
+  radius: number,
+  ms: number,
+  source: ReviewSource,
+  signal: AbortSignal,
+  onProgress?: (p: ThinkProgress) => void,
+): Promise<PositionFacts> {
   if (source === 'server') {
-    const f = await api.reviewPosition(moves, radius, ms, signal);
+    const f = await api.reviewPosition(moves, radius, ms, signal, onProgress);
     return { winX: f.winX, proven: f.proven, best: f.best.map(([q, r]) => ({ q, r })) };
   }
   // Public site: Six runs in the browser.
   const { browserEvaluate, browserTurn } = await import('../bot/client.ts');
-  const best = await browserTurn(moves, radius, ms, signal);
+  const best = await browserTurn(moves, radius, ms, signal, null, onProgress);
   const judged = await browserEvaluate(moves, radius, signal);
   return { winX: judged.winX, proven: judged.proven, best };
 }
@@ -50,6 +59,8 @@ export interface ReviewState {
   deep: ReadonlySet<number>;
   deepening: number | null;
   lookDeeper: (turn: number) => void;
+  /** How far Six's current search is, while it runs. */
+  progress: ThinkProgress | null;
 }
 
 /** Judges positions in order so the move list fills in as it goes; each turn needs the position before and after. */
@@ -61,6 +72,7 @@ export function useReview(moves: readonly Hex[], radius: number, names: Record<P
   const [deep, setDeep] = useState<ReadonlySet<number>>(new Set());
   const [deepening, setDeepening] = useState<number | null>(null);
   const deepAbort = useRef<AbortController | null>(null);
+  const meter = useThinking();
 
   useEffect(() => {
     setFacts([]);
@@ -71,7 +83,7 @@ export function useReview(moves: readonly Hex[], radius: number, names: Record<P
     (async () => {
       for (let i = 0; i < positions.length; i++) {
         try {
-          const f = await factsFor(moves.slice(0, positions[i]), radius, QUICK_MS, source, controller.signal);
+          const f = await factsFor(moves.slice(0, positions[i]), radius, QUICK_MS, source, controller.signal, meter.start());
           if (controller.signal.aborted) return;
           got[i] = f;
           const fixed = i > 0 ? await withDefense(turns[i - 1]!, got[i - 1]!, f, moves, radius, source, controller.signal) : null;
@@ -89,8 +101,12 @@ export function useReview(moves: readonly Hex[], radius: number, names: Record<P
           return;
         }
       }
+      meter.stop();
     })();
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      meter.stop();
+    };
   }, [moves, radius, source, positions]);
 
   const judged = facts.filter(Boolean).length;
@@ -110,8 +126,9 @@ export function useReview(moves: readonly Hex[], radius: number, names: Record<P
     setDeepening(turn);
     (async () => {
       try {
+        const onProgress = meter.start();
         const [deepBefore, after] = await Promise.all([turn, turn + 1].map((i) =>
-          factsFor(moves.slice(0, positions[i]), radius, DEEP_MS, source, controller.signal)));
+          factsFor(moves.slice(0, positions[i]), radius, DEEP_MS, source, controller.signal, i === turn ? onProgress : undefined)));
         if (controller.signal.aborted) return;
         const before = await withDefense(turns[turn]!, deepBefore!, after!, moves, radius, source, controller.signal);
         if (controller.signal.aborted) return;
@@ -125,12 +142,15 @@ export function useReview(moves: readonly Hex[], radius: number, names: Record<P
       } catch (e) {
         if (!controller.signal.aborted) setError((e as Error).message);
       } finally {
-        if (deepAbort.current === controller) setDeepening(null);
+        if (deepAbort.current === controller) {
+          setDeepening(null);
+          meter.stop();
+        }
       }
     })();
   }, [moves, radius, source, positions, turns]);
 
   useEffect(() => () => deepAbort.current?.abort(), []);
 
-  return { review, judged, total: positions.length, done: judged === positions.length, error, deep, deepening, lookDeeper };
+  return { review, judged, total: positions.length, done: judged === positions.length, error, deep, deepening, lookDeeper, progress: meter.progress };
 }

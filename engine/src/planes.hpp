@@ -14,6 +14,7 @@ constexpr int kRecentStones = 4;
 
 // floor(mean + 1/2) of the last kRecentStones stones on each axis, (0, 0) on an empty board.
 Hex cropCenter(const std::vector<Hex>& moves);
+Hex cropCenter(const Board& board);
 
 // Row from r, column from q; -1 outside the crop.
 int cropIndex(Hex cell, Hex center);

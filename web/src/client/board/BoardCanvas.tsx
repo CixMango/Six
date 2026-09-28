@@ -2,6 +2,7 @@ import { useCallback, useEffect, useImperativeHandle, useRef, type Ref } from 'r
 import { hexToPixel, type Hex } from '../../shared/hex.ts';
 import type { Game, Player } from '../../shared/rules.ts';
 import { fitCells, screenToCell, worldToScreen, zoomAt, type Camera } from './camera.ts';
+import { autoCameraOn } from '../lib/autoCamera.ts';
 import { BoardRenderer, type BoardMark } from './renderer.ts';
 import { usePrefersReducedMotion } from '../lib/motion.ts';
 import { onThemeChange } from '../lib/theme.ts';
@@ -22,6 +23,8 @@ interface Props {
   alarm?: boolean;
   /** Draw each side in the other's colour (a HeXO game where blue moved first). */
   swapColors?: boolean;
+  /** Free placement (analysis board): every cell takes clicks, stones or not; the hover shows `player` (null: erasing). */
+  freePlace?: { player: Player | null };
   label: string;
   /** Extra space kept clear of overlays, in CSS px, when framing stones. */
   inset?: { top: number; right: number; bottom: number; left: number };
@@ -33,7 +36,7 @@ const CAMERA_TWEEN_MS = 320;
 /** Paint fallback for when rAF is paused (hidden or embedded views). */
 const FALLBACK_FRAME_MS = 120;
 
-export function BoardCanvas({ game, version, interactive, onPlace, marks = [], label, inset, alarm = false, swapColors = false, ref }: Props) {
+export function BoardCanvas({ game, version, interactive, onPlace, marks = [], label, inset, alarm = false, swapColors = false, freePlace, ref }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<BoardRenderer | null>(null);
@@ -48,8 +51,9 @@ export function BoardCanvas({ game, version, interactive, onPlace, marks = [], l
   const reducedMotion = usePrefersReducedMotion();
 
   // Latest props for the draw loop without restarting it.
-  const live = useRef({ game, version, interactive, marks, reducedMotion, onPlace, alarm, swapColors });
-  live.current = { game, version, interactive, marks, reducedMotion, onPlace, alarm, swapColors };
+  const live = useRef({ game, version, interactive, marks, reducedMotion, onPlace, alarm, swapColors, freePlace });
+  live.current = { game, version, interactive, marks, reducedMotion, onPlace, alarm, swapColors, freePlace };
+  const takes = (cell: Hex) => (live.current.freePlace ? true : live.current.game.isPlayable(cell.q, cell.r));
 
   const request = useCallback((continuous = false) => {
     if (frame.current !== null) return;
@@ -89,7 +93,15 @@ export function BoardCanvas({ game, version, interactive, onPlace, marks = [], l
       renderer.sync(g, v, now);
       const animating = renderer.draw(
         camera.current,
-        { hover: canPlay ? hover.current : null, hoverPlayer: canPlay ? g.current : null, focus: focus.current, marks: m, reducedMotion: rm, alarm: red },
+        {
+          hover: canPlay ? hover.current : null,
+          hoverPlayer: canPlay ? (live.current.freePlace ? live.current.freePlace.player : g.current) : null,
+          hoverAnywhere: Boolean(live.current.freePlace),
+          focus: focus.current,
+          marks: m,
+          reducedMotion: rm,
+          alarm: red,
+        },
         now,
       );
       lastDraw.current = now;
@@ -117,12 +129,12 @@ export function BoardCanvas({ game, version, interactive, onPlace, marks = [], l
     const { w, h } = size.current;
     // Suggestions and follow-ups (review, retry hints) are framed with the stones so they're never off-screen.
     const shown = live.current.marks.filter((m) => m.kind !== 'threat').map((m) => m.cell);
-    const cells = [...(live.current.game.moves.length > 0 ? live.current.game.moves : [{ q: 0, r: 0 }]), ...shown];
+    const cells = [...(live.current.game.stones.length > 0 ? live.current.game.stones : [{ q: 0, r: 0 }]), ...shown];
     const usableW = Math.max(200, w - pad.left - pad.right);
     const usableH = Math.max(200, h - pad.top - pad.bottom);
     // Phones keep stones large and rely on panning.
     const phone = w < 720;
-    const hasStones = live.current.game.moves.length > 0;
+    const hasStones = live.current.game.stones.length > 0;
     const margin = hasStones ? (phone ? 3 : 4) : phone ? 4.5 : live.current.game.radius + 1;
     const fit = fitCells(cells, usableW, usableH, margin);
     // Center the fit inside the area the overlays leave clear.
@@ -179,16 +191,17 @@ export function BoardCanvas({ game, version, interactive, onPlace, marks = [], l
     };
   }, [framing, request]);
 
-  const prevCount = useRef(game.moves.length);
+  const prevCount = useRef(game.stones.length);
   useEffect(() => {
-    const count = game.moves.length;
+    const count = game.stones.length;
     const { w, h } = size.current;
     if (w === 0) {
       // Not measured yet: the first resize frames the board.
       framed.current = false;
     } else if (count < prevCount.current || (count > 0 && prevCount.current === 0 && count > 1)) {
       moveCamera(framing(), true);
-    } else if (count > prevCount.current && game.lastMove && w > 0) {
+    } else if (count > prevCount.current && game.lastMove && w > 0 && autoCameraOn()) {
+      // Off by default: moving the camera between a turn's two stones makes the second click miss.
       const p = worldToScreen(camera.current, w, h, hexToPixel(game.lastMove, 1));
       const pad = insetRef.current ?? { top: 0, right: 0, bottom: 0, left: 0 };
       const edge = Math.min(w, h) * 0.06;
@@ -280,8 +293,8 @@ export function BoardCanvas({ game, version, interactive, onPlace, marks = [], l
       const p = local(e);
       const { w, h } = size.current;
       const cell = screenToCell(camera.current, w, h, p.x, p.y);
-      const { game: current, interactive: canPlay, onPlace: place } = live.current;
-      if (canPlay && place && current.isPlayable(cell.q, cell.r)) place(cell);
+      const { interactive: canPlay, onPlace: place } = live.current;
+      if (canPlay && place && takes(cell)) place(cell);
     }
     if (pointers.current.size < 2) g.pinch = null;
   };
@@ -322,8 +335,8 @@ export function BoardCanvas({ game, version, interactive, onPlace, marks = [], l
       request();
     } else if ((e.key === 'Enter' || e.key === ' ') && focus.current) {
       e.preventDefault();
-      const { game: current, interactive: canPlay, onPlace: place } = live.current;
-      if (canPlay && place && current.isPlayable(focus.current.q, focus.current.r)) place(focus.current);
+      const { interactive: canPlay, onPlace: place } = live.current;
+      if (canPlay && place && takes(focus.current)) place(focus.current);
     } else if (e.key === '+' || e.key === '=') {
       e.preventDefault();
       const { w, h } = size.current;

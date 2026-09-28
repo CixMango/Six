@@ -42,7 +42,7 @@ describe('import box', () => {
     const record = buildReplay({ game: Game.fromMoves([h(0, 0), h(1, 0)], 8), mode: 'bot', players: { X: seat, O: seat }, resignedBy: null });
     const parsed = parseGameText(JSON.stringify(record));
     expect(parsed.kind === 'replay' && parsed.record.moves).toEqual([[0, 0], [1, 0]]);
-    expect(() => parseGameText('hello')).toThrow(/HeXO link or HTTTX/);
+    expect(() => parseGameText('hello')).toThrow(/HeXO link, HTTTX/);
     expect(() => parseGameText('{ not json')).toThrow(/valid replay/);
   });
 });

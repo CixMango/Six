@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
-// Messages in:  { id, moves, radius, movetimeMs }   Messages out: { id, cells } | { id, error } | { ready, backend }
+// Messages in:  { id, moves, radius, movetimeMs, nodes? }
+// Messages out: { id, cells } | { id, error } | { id, progress: { nodes, ms } } | { ready, backend }
 import * as ort from 'onnxruntime-web';
 import { createBrowserBot, type BrowserBot, type SixBotModule } from './browserBot.ts';
 import type { Hex } from '../../shared/hex.ts';
@@ -46,7 +47,7 @@ function load(): Promise<BrowserBot> {
 
 let lastMoves: readonly Hex[] = [];
 
-self.onmessage = async (event: MessageEvent<{ id: number; moves: Hex[]; radius: number; movetimeMs: number; warm?: boolean; judge?: boolean }>) => {
+self.onmessage = async (event: MessageEvent<{ id: number; moves: Hex[]; radius: number; movetimeMs: number; nodes?: number | null; warm?: boolean; judge?: boolean }>) => {
   if (event.data.warm) {
     load().catch(() => undefined);  // a failure resurfaces on the first real turn
     return;
@@ -61,13 +62,13 @@ self.onmessage = async (event: MessageEvent<{ id: number; moves: Hex[]; radius: 
     }
     return;
   }
-  const { id, moves, radius, movetimeMs } = event.data;
+  const { id, moves, radius, movetimeMs, nodes } = event.data;
   try {
     const engine = await load();
     // A game that isn't a continuation of the last one starts a fresh tree.
     const continues = lastMoves.length <= moves.length && lastMoves.every((m, i) => m.q === moves[i]!.q && m.r === moves[i]!.r);
     if (!continues) engine.newGame();
-    const cells = await engine.turn(moves, radius, movetimeMs);
+    const cells = await engine.turn(moves, radius, movetimeMs, nodes ?? 0, (n, ms) => postMessage({ id, progress: { nodes: n, ms } }));
     lastMoves = [...moves, ...cells];
     postMessage({ id, cells });
   } catch (e) {

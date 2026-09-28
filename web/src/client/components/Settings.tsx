@@ -1,6 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Settings as Gear, X } from 'lucide-react';
 import { Segmented, SoundCheck } from './Broadcast.tsx';
+import { api } from '../lib/api.ts';
+import { useAutoCamera } from '../lib/autoCamera.ts';
+import { useThinkBy } from '../lib/thinkBy.ts';
 import { useBlunderMode } from '../lib/blunderMode.ts';
 import { useBloom, useTheme } from '../lib/theme.ts';
 import { ThemePicker } from './ThemePicker.tsx';
@@ -11,7 +14,18 @@ export function SettingsButton() {
   const [blunderMode, setBlunderMode] = useBlunderMode();
   const [theme, setTheme] = useTheme();
   const [bloom, setBloom] = useBloom();
+  const [autoCamera, setAutoCamera] = useAutoCamera();
+  const [thinking, setThinking] = useThinkBy();
   const titleId = useId();
+  const [canQuit, setCanQuit] = useState(false);
+  const [stopped, setStopped] = useState(false);
+  const [shortcut, setShortcut] = useState('');
+
+  // The downloaded app has no window to close, so the host stops it here.
+  useEffect(() => {
+    if (!open) return;
+    api.info().then((i) => setCanQuit(Boolean(i.canQuit))).catch(() => setCanQuit(false));
+  }, [open]);
 
   useEffect(() => {
     const d = dialog.current;
@@ -69,6 +83,70 @@ export function SettingsButton() {
             </p>
             {blunderMode && <SoundCheck />}
           </section>
+
+          <section className="settings-section">
+            <Segmented
+              label="Six thinks by"
+              value={thinking}
+              options={[{ value: 'positions', label: 'Positions' }, { value: 'time', label: 'Time' }]}
+              onChange={setThinking}
+            />
+            <p className="settings-note">
+              {thinking === 'positions'
+                ? 'Six looks at the same number of positions on any computer, so it plays at full strength everywhere. Slower computers take longer per move.'
+                : 'Six stops at the chosen time. On a slower computer it looks at fewer positions, so it plays weaker.'}
+            </p>
+          </section>
+
+          <section className="settings-section">
+            <Segmented
+              label="Auto camera"
+              value={autoCamera ? 'on' : 'off'}
+              options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}
+              onChange={(v) => setAutoCamera(v === 'on')}
+            />
+            <p className="settings-note">Automatically moves the camera to match the board size. (Can cause miss clicks)</p>
+          </section>
+
+          {canQuit && (
+            <section className="settings-section">
+              <button
+                type="button"
+                className="button"
+                onClick={() => {
+                  setShortcut('Adding...');
+                  api.desktopShortcut().then(
+                    () => setShortcut('Added: Six is on your desktop.'),
+                    (e: Error) => setShortcut(`Couldn't add it: ${e.message}`),
+                  );
+                }}
+              >
+                Add Six to the desktop
+              </button>
+              <p className="settings-note" role="status">{shortcut || 'A shortcut that opens Six, like the Six file in its folder.'}</p>
+            </section>
+          )}
+
+          {canQuit && (
+            <section className="settings-section">
+              {stopped ? (
+                <p className="settings-note" role="status">Six has stopped. You can close this tab; open Six again to play.</p>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="button"
+                    onClick={() => {
+                      api.quit().then(() => setStopped(true)).catch(() => setStopped(true));
+                    }}
+                  >
+                    Quit Six
+                  </button>
+                  <p className="settings-note">Stops Six on this PC. It also stops by itself a few minutes after the last tab closes.</p>
+                </>
+              )}
+            </section>
+          )}
         </div>
       </dialog>
     </>

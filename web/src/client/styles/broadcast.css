@@ -1510,3 +1510,79 @@
     max-width: max(4rem, calc(50vw - 30rem));
   }
 }
+
+/* ---------- Thinking meter: Six's speed while it thinks ---------- */
+.think-meter {
+  position: absolute;
+  z-index: 3;
+  top: calc(var(--space-4) + 42px);
+  left: var(--edge);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 30px;
+  padding: 0 var(--space-3);
+  overflow: hidden;
+  font-size: var(--step--1);
+  font-variant-numeric: tabular-nums;
+  animation: wipe-in var(--dur) var(--ease-out) both;
+}
+
+.think-pulse {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text);
+  animation: live-blink 1.2s steps(2, jump-none) infinite;
+}
+
+.think-who {
+  color: var(--text-2);
+  font-size: var(--step--2);
+}
+
+.think-rate {
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.think-rate strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.think-left {
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.think-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--text);
+  transform-origin: left;
+  transition: transform var(--dur) var(--ease-out);
+}
+
+/* The scorebug drops a row below this width; the meter goes under it. */
+@media (max-width: 1180px) {
+  .think-meter {
+    top: calc(var(--space-4) + 44px + 76px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .think-pulse {
+    animation: none;
+  }
+}
+
+/* Two-line options (a level over its position count). */
+.seg-option span {
+  white-space: pre-line;
+  line-height: 1.15;
+}

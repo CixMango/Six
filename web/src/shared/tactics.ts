@@ -11,7 +11,7 @@ export interface LineWindow {
 export function lineWindows(game: Game): LineWindow[] {
   const seen = new Set<string>();
   const out: LineWindow[] = [];
-  for (const stone of game.moves) {
+  for (const stone of game.stones) {
     LINE_AXES.forEach((axis, axisIndex) => {
       for (let k = 0; k < WIN_LENGTH; k++) {
         const start = { q: stone.q - axis.q * k, r: stone.r - axis.r * k };

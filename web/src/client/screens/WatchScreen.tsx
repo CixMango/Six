@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { currentThinkBy } from '../lib/thinkBy.ts';
+import { thinksByPositions } from '../../shared/thinking.ts';
+import { ThinkingMeter, useThinking } from '../components/ThinkingMeter.tsx';
 import { useLocation, useSearch } from 'wouter';
 import { LocateFixed, Minus, Pause, Play, Plus, ShieldAlert, SkipForward } from 'lucide-react';
 import { Game, type Player } from '../../shared/rules.ts';
@@ -28,6 +31,7 @@ const PACE: Record<Speed, { think: number; between: number; nextGame: number }> 
 };
 
 function publicName(id: BotId, level: number): string {
+  if (thinksByPositions(id, currentThinkBy())) return `Six level ${level}`;
   const label = BOT_META[id].levelLabels[level - 1] ?? String(level);
   return id === 'hexweb' ? `Six ${label}` : `${BOT_META[id].name} ${label}`;
 }
@@ -48,7 +52,10 @@ export function WatchScreen({ offline = false }: { offline?: boolean } = {}) {
   const radius = parseRadius(params.get('radius'));
   const names: Record<Player, string> = offline
     ? { X: publicName(bots.X, levels.X), O: publicName(bots.O, levels.O) }
-    : { X: botName(bots.X, levels.X, generations.X), O: botName(bots.O, levels.O, generations.O) };
+    : {
+      X: botName(bots.X, levels.X, generations.X, thinksByPositions(bots.X, currentThinkBy())),
+      O: botName(bots.O, levels.O, generations.O, thinksByPositions(bots.O, currentThinkBy())),
+    };
 
   const store = useGameStore(() => new Game(radius));
   const { game, version } = store;
@@ -61,6 +68,7 @@ export function WatchScreen({ offline = false }: { offline?: boolean } = {}) {
   const [speed, setSpeed] = useState<Speed>('normal');
   const [tally, setTally] = useState({ X: 0, O: 0, games: 0 });
   const [error, setError] = useState('');
+  const meter = useThinking();
   const pace = useRef(PACE.normal);
   pace.current = PACE[speed];
 
@@ -71,6 +79,7 @@ export function WatchScreen({ offline = false }: { offline?: boolean } = {}) {
     if (!running || finished) return;
     let cancelled = false;
     const controller = new AbortController();
+    const onProgress = meter.start();
     (async () => {
       const started = performance.now();
       try {
@@ -78,7 +87,7 @@ export function WatchScreen({ offline = false }: { offline?: boolean } = {}) {
         // Offline, Rookie runs here; everything else goes through api.botTurn.
         const cells = offline && bot === 'rookie'
           ? chooseTurn(game, { level: levels[game.current] })
-          : await api.botTurn(game.moves, radius, bot, levels[game.current], controller.signal, generations[game.current]);
+          : await api.botTurn(game.moves, radius, bot, levels[game.current], controller.signal, generations[game.current], onProgress).finally(meter.stop);
         await wait(Math.max(0, pace.current.think - (performance.now() - started)));
         for (const [i, cell] of cells.entries()) {
           if (cancelled) return;
@@ -97,6 +106,7 @@ export function WatchScreen({ offline = false }: { offline?: boolean } = {}) {
     return () => {
       cancelled = true;
       controller.abort();
+      meter.stop();
     };
   }, [running, finished, game.turn, game]);
 
@@ -173,6 +183,7 @@ export function WatchScreen({ offline = false }: { offline?: boolean } = {}) {
         }
       />
       <ChannelBug tag="Bot match" detail={offline ? `${names.X} vs ${names.O}` : `Radius ${radius}`} />
+      <ThinkingMeter progress={meter.progress} who={`Six (${game.current})`} />
       <SettingsButton />
       <Scorebug names={names} lastMove={lastMoveInfo(game)} onShowLastStone={() => board.current?.showLastStone()} current={game.current} stonesLeft={game.stonesLeft} turn={game.turn} winner={game.winner} finished={finished} chance={chance} ratings={ratings} />
       <BlunderCall blunder={blunder} names={names} />

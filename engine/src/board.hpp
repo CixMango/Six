@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 namespace six {
@@ -53,8 +54,17 @@ class Board {
 
   int radius() const { return radius_; }
   int stones() const { return static_cast<int>(moves_.size()); }
+  // Every stone in placement order, set-up stones first.
   const std::vector<Hex>& moves() const { return moves_; }
+  Player ownerOf(int i) const { return owners_[static_cast<std::size_t>(i)]; }
   Player winner() const { return winner_; }
+
+  // A position that play can't reach (an analysis board's): these stones, then `toMove` with `stonesLeft` (1 or 2)
+  // stones to place. Only on an empty board; false if stones overlap or spread wider than the board window.
+  bool setup(const std::vector<std::pair<Hex, Player>>& stones, Player toMove, int stonesLeft);
+  int setupStones() const { return setupStones_; }
+  // The next stone is the second of its turn.
+  bool secondStone() const;
 
   // Frozen at the winner once the game ends.
   Player current() const;
@@ -169,8 +179,14 @@ class Board {
   static void toggleMembership(std::vector<std::int32_t>& list, std::vector<std::int16_t>& pos, int windowId, bool add);
   void rebuildAround(Hex center);
 
+  // Turn stage for the n-th stone: the index it would have in an ordinary game.
+  int stageIndex(int n) const { return n - setupStones_ + base_; }
+
   int radius_;
   bool searchMode_ = false;
+  int setupStones_ = 0;
+  int base_ = 0;
+  std::vector<Player> owners_;
   int originQ_ = 0;
   int originR_ = 0;
   Player winner_ = Player::None;

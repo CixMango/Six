@@ -46,15 +46,58 @@ Board::Board(int radius)
 }
 
 Player Board::current() const {
-  return winner_ != Player::None ? winner_ : playerForStone(stones());
+  return winner_ != Player::None ? winner_ : playerForStone(stageIndex(stones()));
 }
 
 int Board::turn() const {
-  return turnForStone(winner_ != Player::None ? stones() - 1 : stones());
+  if (winner_ != Player::None && stones() <= setupStones_) return turnForStone(base_);
+  return turnForStone(stageIndex(winner_ != Player::None ? stones() - 1 : stones()));
 }
 
 int Board::stonesLeft() const {
-  return winner_ != Player::None ? stonesLeftBefore(stones() - 1) - 1 : stonesLeftBefore(stones());
+  if (winner_ != Player::None) return stones() <= setupStones_ ? 0 : stonesLeftBefore(stageIndex(stones() - 1)) - 1;
+  return stonesLeftBefore(stageIndex(stones()));
+}
+
+bool Board::secondStone() const {
+  const int i = stageIndex(stones());
+  return winner_ == Player::None && i > 0 && stonesLeftBefore(i) == 1;
+}
+
+bool Board::setup(const std::vector<std::pair<Hex, Player>>& stones, Player toMove, int stonesLeft) {
+  if (!moves_.empty() || (stonesLeft != 1 && stonesLeft != 2) || toMove == Player::None) return false;
+  if (!stones.empty()) {
+    int minQ = stones[0].first.q;
+    int maxQ = minQ;
+    int minR = stones[0].first.r;
+    int maxR = minR;
+    for (const auto& [h, p] : stones) {
+      if (p == Player::None) return false;
+      minQ = std::min(minQ, h.q);
+      maxQ = std::max(maxQ, h.q);
+      minR = std::min(minR, h.r);
+      maxR = std::max(maxR, h.r);
+    }
+    if (maxQ - minQ >= kSize - 2 * kRecenterMargin || maxR - minR >= kSize - 2 * kRecenterMargin) return false;
+    originQ_ = (minQ + maxQ) / 2;
+    originR_ = (minR + maxR) / 2;
+    for (const auto& [h, p] : stones) {
+      if (cells_[indexOf(h)] != Player::None) {
+        *this = Board(radius_);
+        return false;
+      }
+      moves_.push_back(h);
+      owners_.push_back(p);
+      apply(h, p, +1);
+    }
+    for (int s = 0; s < 2 && winner_ == Player::None; ++s) {
+      if (alive_[s][kWinLength] > 0) winner_ = s == 0 ? Player::X : Player::O;
+    }
+  }
+  setupStones_ = static_cast<int>(stones.size());
+  // The ordinary-game index of the next stone: X's first (opening), second or O's first, second.
+  base_ = toMove == Player::X ? (stonesLeft == 1 ? (stones.empty() ? 0 : 4) : 3) : (stonesLeft == 2 ? 1 : 2);
+  return true;
 }
 
 bool Board::insideWindow(Hex h, int margin) const {
@@ -103,6 +146,7 @@ PlaceError Board::place(Hex h) {
   if (!insideWindow(h, kRecenterMargin)) rebuildAround(h);
   const Player p = current();
   moves_.push_back(h);
+  owners_.push_back(p);
   apply(h, p, +1);
   const int shift = nibbleShift(p);
   for (int a = 0; a < 3 && winner_ == Player::None; ++a) {
@@ -118,10 +162,11 @@ PlaceError Board::place(Hex h) {
 }
 
 void Board::undo() {
-  if (moves_.empty()) return;
+  if (static_cast<int>(moves_.size()) <= setupStones_) return;
   const Hex h = moves_.back();
   const Player p = cells_[indexOf(h)];
   moves_.pop_back();
+  owners_.pop_back();
   apply(h, p, -1);
   winner_ = Player::None;
 }
@@ -235,7 +280,7 @@ void Board::rebuildAround(Hex incoming) {
   stoneHash_ = 0;
   for (std::size_t i = 0; i < moves.size(); ++i) {
     moves_.push_back(moves[i]);
-    apply(moves[i], playerForStone(static_cast<int>(i)), +1);
+    apply(moves[i], owners_[i], +1);
   }
 }
 

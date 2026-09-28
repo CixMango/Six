@@ -1,7 +1,8 @@
 name: Release builds
 
-# Builds the Linux and macOS downloads and attaches them to an existing release. The network comes from that
-# release's Windows zip, so every download plays the same generation.
+# Builds the Linux and macOS downloads and the installers for all three systems, and attaches them to an existing
+# release. The network comes from that release's Windows zip, so every download plays the same generation. Each
+# installer is installed and started here before it's attached.
 on:
   workflow_dispatch:
     inputs:
@@ -81,11 +82,25 @@ jobs:
             echo "::endgroup::"
           done
 
+      - name: Installer (.deb)
+        run: |
+          mkdir -p /tmp/unpacked && tar -xzf web/release/Six-*-linux-x64.tar.gz -C /tmp/unpacked
+          sh web/installer/linux/build-deb.sh "${{ inputs.version }}" /tmp/unpacked/Six web/release
+
+      - name: Installer smoke test
+        run: |
+          sudo apt-get install -y ./web/release/Six-*-Setup-linux.deb
+          SIX_PORT=6692 SIX_NO_BROWSER=1 six
+          for i in $(seq 60); do curl -sf http://localhost:6692/api/info > /tmp/info.json && break; sleep 1; done
+          grep -q '"version":"${{ inputs.version }}"' /tmp/info.json
+          test -f "$HOME/.local/share/six/web/launch.mjs"
+          curl -sf -X POST http://localhost:6692/api/quit
+
       - name: Attach to the release
         if: inputs.publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "v${{ inputs.version }}" web/release/Six-*-linux-x64.tar.gz --clobber
+        run: gh release upload "v${{ inputs.version }}" web/release/Six-*-linux-x64.tar.gz web/release/Six-*-Setup-linux.deb --clobber
 
   mac:
     runs-on: macos-14
@@ -142,8 +157,64 @@ jobs:
           curl -sf -X POST http://localhost:6690/api/bot/turn -H 'content-type: application/json' \
             -d '{"moves":[[0,0],[1,0],[2,-1]],"radius":8,"bot":"hexnet","level":1}' | grep -q cells
 
+      - name: Installer (.pkg)
+        run: |
+          mkdir -p /tmp/unpacked && ditto -x -k web/release/Six-*-macos-arm64.zip /tmp/unpacked
+          sh web/installer/mac/build-pkg.sh "${{ inputs.version }}" /tmp/unpacked/Six web/release
+
+      - name: Installer smoke test
+        run: |
+          installer -pkg web/release/Six-*-Setup-macos.pkg -target CurrentUserHomeDirectory
+          app="$HOME/Applications/Six.app"
+          test -x "$app/Contents/MacOS/Six"
+          SIX_PORT=6692 SIX_NO_BROWSER=1 "$app/Contents/MacOS/Six"
+          for i in $(seq 60); do curl -sf http://localhost:6692/api/info > /tmp/info.json && break; sleep 1; done
+          grep -q '"version":"${{ inputs.version }}"' /tmp/info.json
+          curl -sf -X POST http://localhost:6692/api/quit
+
       - name: Attach to the release
         if: inputs.publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "v${{ inputs.version }}" web/release/Six-*-macos-arm64.zip --clobber
+        run: gh release upload "v${{ inputs.version }}" web/release/Six-*-macos-arm64.zip web/release/Six-*-Setup-macos.pkg --clobber
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The Windows download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "v${{ inputs.version }}" -R CixMango/Six --pattern '*windows-x64.zip' --dir dl
+          Expand-Archive (Get-Item dl\*.zip).FullName -DestinationPath dl
+
+      - name: Inno Setup
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+
+      - name: Installer (setup wizard)
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Q "/DVersion=${{ inputs.version }}" "/DSource=$PWD\dl\Six" "/DOutput=$PWD\out" web\installer\six.iss
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - name: Installer smoke test
+        run: |
+          $setup = (Get-Item out\Six-*-Setup-windows.exe).FullName
+          Start-Process $setup -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/TASKS=desktopicon' -Wait
+          $app = "$env:LOCALAPPDATA\Programs\Six"
+          if (-not (Test-Path "$app\Six.exe")) { throw 'Six.exe was not installed' }
+          if (-not (Test-Path ([Environment]::GetFolderPath('Desktop') + '\Six.lnk'))) { throw 'no desktop shortcut' }
+          $env:SIX_PORT = '6692'; $env:SIX_NO_BROWSER = '1'
+          Start-Process "$app\Six.exe"
+          $info = $null
+          for ($i = 0; $i -lt 60 -and -not $info; $i++) { Start-Sleep 1; try { $info = Invoke-RestMethod http://localhost:6692/api/info } catch {} }
+          if ($info.version -ne '${{ inputs.version }}') { throw "Six didn't start (got $($info.version))" }
+          Invoke-RestMethod -Method Post http://localhost:6692/api/quit | Out-Null
+
+      - name: Attach to the release
+        if: inputs.publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "v${{ inputs.version }}" (Get-Item out\Six-*-Setup-windows.exe).FullName --clobber

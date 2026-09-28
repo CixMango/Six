@@ -1,4 +1,5 @@
-import { Game, otherPlayer, SAVED_RADII, turnForStone, type Player } from './rules.ts';
+import { Game, otherPlayer, SAVED_RADII, turnForStone, type Player, type Setup } from './rules.ts';
+import { parseSetup } from './setup.ts';
 
 export type MatchMode = 'online' | 'bot' | 'botmatch' | 'analysis' | 'hexo' | 'imported';
 export type ResultReason = 'six' | 'resign' | 'abandoned' | 'unfinished';
@@ -28,6 +29,8 @@ export interface ReplayRecord {
   result: ReplayResult;
   // Imported HeXO game where blue moved first.
   swapColors?: boolean;
+  // A set-up position (analysis board or imported notation) the moves start from.
+  setup?: Setup;
 }
 
 export interface ReplaySummary {
@@ -41,6 +44,7 @@ export interface ReplaySummary {
   winner: Player | null;
   reason: ResultReason;
   swapColors?: boolean;
+  setup?: boolean;
 }
 
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -79,6 +83,7 @@ export function buildReplay(args: {
     moves: game.moves.map((m) => [m.q, m.r]),
     result,
     ...(args.swapColors ? { swapColors: true } : {}),
+    ...(game.setup ? { setup: game.setup } : {}),
   };
 }
 
@@ -114,8 +119,10 @@ export function validateReplay(value: unknown): ReplayRecord {
     return [m[0], m[1]] as [number, number];
   });
   let game: Game;
+  let setup: Setup | null;
   try {
-    game = Game.fromMoves(moves.map(([q, r]) => ({ q, r })), v.radius as number);
+    setup = parseSetup(v.setup);
+    game = Game.fromMoves(moves.map(([q, r]) => ({ q, r })), v.radius as number, setup);
   } catch (e) {
     fail((e as Error).message);
   }
@@ -138,6 +145,7 @@ export function validateReplay(value: unknown): ReplayRecord {
     moves,
     result: { winner: winner as Player | null, reason: reason as ResultReason },
     ...(v.swapColors === true ? { swapColors: true } : {}),
+    ...(setup ? { setup } : {}),
   };
 }
 
@@ -154,5 +162,6 @@ export function summarize(record: ReplayRecord): ReplaySummary {
     winner: record.result.winner,
     reason: record.result.reason,
     ...(record.swapColors ? { swapColors: true } : {}),
+    ...(record.setup ? { setup: true } : {}),
   };
 }

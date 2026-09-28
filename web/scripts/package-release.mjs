@@ -39,7 +39,7 @@ const platform = {
     ],
     archive: `Six-${version}-windows-x64.zip`,
     gpu: 'The bot runs on your graphics card (any DirectX 12 GPU: NVIDIA, AMD or Intel)',
-    start: 'extract the zip first (right-click it, Extract All), then double-click "Start Six.cmd"\nin the extracted folder. Your browser opens at http://localhost:6600.\nKeep the black window open while you play; close it to stop Six.',
+    start: 'extract the zip first (right-click it, Extract All), then double-click "Six" in the extracted folder.\nYour browser opens at http://localhost:6600 and nothing else opens. To stop Six, use Quit in Settings\n(it also stops by itself a few minutes after you close the tab).',
   },
   linux: {
     engineDir: 'engine/build/linux',
@@ -54,7 +54,7 @@ const platform = {
     ],
     archive: `Six-${version}-linux-x64.tar.gz`,
     gpu: 'The bot runs on your graphics card: NVIDIA through CUDA when CUDA 12 and cuDNN 9 are installed, otherwise any\nAMD, Intel or NVIDIA card through WebGPU (needs the Vulkan driver, libvulkan1), and on the CPU if neither works (slower)',
-    start: 'run ./start-six.sh. Your browser opens at http://localhost:6600.\nKeep the terminal open while you play; Ctrl+C stops Six.',
+    start: 'run ./start-six.sh. Six starts in the background and your browser opens at http://localhost:6600.\nTo stop Six, use Quit in Settings (it also stops by itself a few minutes after you close the tab).',
   },
   mac: {
     engineDir: 'engine/build/mac',
@@ -69,7 +69,7 @@ const platform = {
     ],
     archive: `Six-${version}-macos-arm64.zip`,
     gpu: 'The bot runs on the Mac\'s GPU through WebGPU (Metal), and on the CPU if that fails. Apple Silicon (M1 or newer) only',
-    start: 'double-click the zip to unpack it, then right-click "Start Six.command" and choose Open (the first time\nmacOS asks because the app isn\'t from the App Store). Your browser opens at http://localhost:6600.\nKeep the Terminal window open while you play; close it to stop Six.',
+    start: 'double-click the zip to unpack it, then right-click "Start Six.command" and choose Open (the first time\nmacOS asks because the app isn\'t from the App Store). Your browser opens at http://localhost:6600.\nSix runs in the background: to stop it, use Quit in Settings (it also stops by itself a few minutes after\nyou close the tab).',
   },
 }[os];
 
@@ -103,6 +103,18 @@ await build({
   banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
   logLevel: 'warning',
 });
+// The launcher ("Six" runs it with no window) and the version it checks for updates against.
+await build({
+  entryPoints: [path.join(web, 'src/launcher/launch.ts')],
+  outfile: path.join(out, 'web/launch.mjs'),
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  target: 'node24',
+  logLevel: 'warning',
+});
+const asset = platform.archive.slice(`Six-${version}-`.length);
+writeFileSync(path.join(out, 'web/version.json'), `${JSON.stringify({ version, asset })}\n`);
 
 mkdirSync(path.join(out, 'engine'), { recursive: true });
 for (const f of engineFiles) cpSync(path.join(engineDir, f), path.join(out, 'engine', f));
@@ -121,45 +133,22 @@ if (!nodeLicense.ok) throw new Error(`could not fetch the Node.js license (${nod
 writeFileSync(path.join(licenses, 'node-LICENSE.txt'), await nodeLicense.text());
 
 if (windows) {
-  writeFileSync(path.join(out, 'Start Six.cmd'), `@echo off\r
-title Six\r
-cd /d "%~dp0"\r
-rem Opened from inside the zip, Windows unpacks only this file, so nothing else is next to it.\r
-if not exist "%~dp0node\\node.exe" (\r
-  echo Six can't find its files. This usually means it was opened from inside the zip.\r
-  echo.\r
-  echo Right-click the zip, choose "Extract All...", then open the extracted Six folder\r
-  echo and double-click "Start Six.cmd" there.\r
-  echo.\r
-  pause\r
-  exit /b 1\r
-)\r
-set "SIX_ENGINE=%~dp0engine\\sixengine.exe"\r
-curl -s -o nul -m 2 http://localhost:6600/api/info && (\r
-  start "" http://localhost:6600\r
-  exit /b 0\r
-)\r
-start "" cmd /c "timeout /t 3 >nul & start http://localhost:6600"\r
-echo Six is running at http://localhost:6600\r
-echo Keep this window open while you play. Close it to stop Six.\r
-"%~dp0node\\node.exe" "%~dp0web\\src\\server\\main.mjs" --prod\r
-if errorlevel 1 pause\r
-`);
+  // Six.exe (engine/tools/launcher.cpp) starts everything with no window.
+  const launcher = path.join(engineDir, 'Six.exe');
+  if (!existsSync(launcher)) throw new Error('missing Six.exe: build the engine first (engine\\build.cmd dml)');
+  cpSync(launcher, path.join(out, 'Six.exe'));
 } else {
   const mac = os === 'mac';
-  const open = mac ? 'open' : 'xdg-open';
   const start = path.join(out, mac ? 'Start Six.command' : 'start-six.sh');
+  // The launcher keeps running in the background (it opens the browser); this script returns at once.
   writeFileSync(start, `#!/bin/sh
-# Starts Six at http://localhost:6600 and opens it in the browser. ${mac ? 'Closing the window' : 'Ctrl+C'} stops it.
+# Starts Six in the background and opens it at http://localhost:6600. Quit it from Settings in the app; it also stops
+# by itself a few minutes after the last tab closes.
 cd "$(dirname "$0")"
-${mac ? '# Downloaded files are quarantined; once this script is allowed to run, clear the flag on the rest.\nxattr -dr com.apple.quarantine . 2>/dev/null\n' : ''}export SIX_ENGINE="$PWD/engine/sixengine"
-if curl -s -o /dev/null -m 2 http://localhost:6600/api/info; then
-  ${open} http://localhost:6600 >/dev/null 2>&1 &
-  exit 0
-fi
-(sleep 3 && ${open} http://localhost:6600 >/dev/null 2>&1) &
-echo "Six is running at http://localhost:6600"
-exec ./node/node web/src/server/main.mjs --prod
+${mac ? '# Downloaded files are quarantined; once this script is allowed to run, clear the flag on the rest.\nxattr -dr com.apple.quarantine . 2>/dev/null\n' : ''}nohup ./node/node web/launch.mjs >/dev/null 2>&1 &
+${mac ? `# Nothing to watch here: close this Terminal window.
+(sleep 1; osascript -e 'tell application "Terminal" to close (every window whose name contains "Start Six")' >/dev/null 2>&1) &
+` : ''}exit 0
 `);
   chmodSync(start, 0o755);
   chmodSync(path.join(out, 'node/node'), 0o755);
@@ -176,7 +165,8 @@ Give it more thinking time on the home screen for stronger play; 10 s or more is
 
 Friends on your LAN or Hamachi can join by the link Six shows, if your firewall lets port 6600 through.
 
-Saved games go in the "data" folder next to this file.
+Saved games go in the "data" folder next to this file (with six.log, if something goes wrong).
+Each time Six opens it checks for a new version and offers to update; your saved games are kept.
 
 License: MIT (LICENSE.txt), including the network. The bundled Node.js, ONNX Runtime${windows ? ' and DirectML' : ''} keep their own
 licenses (licenses folder).

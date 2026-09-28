@@ -1,4 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useThinkBy } from '../lib/thinkBy.ts';
+import { levelLabel, referenceTime, thinksByPositions } from '../../shared/thinking.ts';
+import { TrainingHomeRow } from '../lib/localScreens.ts';
 import { useLocation } from 'wouter';
 import { ChevronDown } from 'lucide-react';
 import { Game } from '../../shared/rules.ts';
@@ -8,7 +11,7 @@ import { ChannelBug, Scorebug, Segmented } from '../components/Broadcast.tsx';
 import { GameImport } from '../components/GameImport.tsx';
 import { SettingsButton } from '../components/Settings.tsx';
 import { GenerationSlider } from '../components/GenerationSlider.tsx';
-import { api, type ServerInfo, type TrainingView } from '../lib/api.ts';
+import { api, type ServerInfo } from '../lib/api.ts';
 import { BOT_META, isBotId, isTimedBot, type BotId } from '../../shared/botMeta.ts';
 import { lastMoveInfo } from '../lib/gameView.ts';
 import { playerName, savePlayerName } from '../lib/identity.ts';
@@ -16,7 +19,7 @@ import { wait } from '../lib/motion.ts';
 import { useNarrow } from '../lib/useNarrow.ts';
 import { useGameStore } from '../lib/useGameStore.ts';
 
-type RowId = 'hexo' | 'bot' | 'friend' | 'friendbot' | 'watch' | 'study' | 'replays' | 'training';
+type RowId = string;
 
 const SIDE_OPTIONS: Array<{ value: SideChoice; label: string }> = [
   { value: 'X', label: 'X (opens)' },
@@ -98,6 +101,11 @@ function RundownRow({ id, tag, title, summary, open, onToggle, children }: {
   );
 }
 
+/** Six if its network is here; otherwise the best engine the PC has, so the app still has an opponent. */
+function offeredBots(bots: readonly BotId[]): BotId[] {
+  return bots.includes('hexnet') ? ['hexnet'] : bots.includes('hexbot') ? ['hexbot'] : ['rookie'];
+}
+
 export function HomeScreen() {
   const [, navigate] = useLocation();
   const [loadedBots, setBots] = useState<BotId[] | null>(null);
@@ -109,7 +117,6 @@ export function HomeScreen() {
   const [open, setOpen] = useState<RowId | null>('bot');
   const [info, setInfo] = useState<ServerInfo | null>(null);
   const [replayCount, setReplayCount] = useState<number | null>(null);
-  const [training, setTraining] = useState<TrainingView | null>(null);
 
   const [botSide, setBotSide] = useState<SideChoice>('X');
   const [botId, setBotId] = useState<BotId>('rookie');
@@ -135,25 +142,28 @@ export function HomeScreen() {
   useEffect(() => {
     api.info().then(setInfo).catch(() => setInfo(null));
     api.replays().then((list) => setReplayCount(list.length)).catch(() => setReplayCount(null));
-    api.training().then(setTraining).catch(() => setTraining(null));
     api.generations().then(setGens).catch(() => undefined);
     api
       .bots()
       .then((list) => {
         const ids = list.map((b) => b.id).filter(isBotId);
         setBots(ids);
-        // Once the engine is built, HexBot is the default opponent.
-        if (ids.includes('hexbot')) {
-          setBotId('hexbot');
-          setWatchXBot('hexbot');
-        }
-        if (ids.includes('hexnet')) setFriendBot('hexnet');
+        const best = offeredBots(ids)[0]!;
+        setBotId(best);
+        setWatchXBot(best);
+        setWatchOBot(best);
+        setFriendBot(best);
       })
       .catch(() => setBots(['rookie']));
   }, []);
 
-  const botOptions = bots.map((id) => ({ value: id, label: BOT_META[id].name }));
-  const levelOptions = (id: BotId) => BOT_META[id].levelLabels.map((label, i) => ({ value: i + 1, label }));
+  // The app offers Six alone; the choice is still shown so players see who they're up against.
+  const botOptions = offeredBots(bots).map((id) => ({ value: id, label: BOT_META[id].name }));
+  const [think] = useThinkBy();
+  const levelOptions = (id: BotId) => BOT_META[id].levelLabels.map((label, i) => ({ value: i + 1, label: levelLabel(id, i + 1, label, think) }));
+  /** "Six level" when thinking by positions, "Six thinking time" by time. */
+  const levelName = (id: BotId) =>
+    !isTimedBot(id) ? 'Rookie strength' : thinksByPositions(id, think) ? `${BOT_META[id].name} level · positions per turn` : `${BOT_META[id].name} thinking time`;
 
   const fit = (id: BotId, level: number) => Math.min(level, BOT_META[id].levelLabels.length);
   const toggle = (id: RowId) => setOpen((current) => (current === id ? null : id));
@@ -218,14 +228,14 @@ export function HomeScreen() {
         <ol className="rundown-list">
           <RundownRow id="hexo" tag="Import" title="Import a game" summary="HeXO link, HTTTX or a replay file" open={open === 'hexo'} onToggle={toggle}>
             <div className="rundown-form">
-              <GameImport label="Game to import" onImport={async (text) => navigate(`/review/${await api.importGame(text)}`)} />
+              <GameImport label="Game to import" onImport={async (text) => navigate(await api.importGame(text))} />
             </div>
           </RundownRow>
           <RundownRow
             id="bot"
             tag="VS bot"
             title="Play the bot"
-            summary={bots.length > 1 ? bots.map((id) => BOT_META[id].name).reverse().join(', ') : 'Rookie, strength 1 to 5'}
+            summary={botOptions.map((o) => o.label).join(', ')}
             open={open === 'bot'}
             onToggle={toggle}
           >
@@ -237,10 +247,11 @@ export function HomeScreen() {
                 navigate(`/bot?bot=${botId}&side=${botSide}&level=${botLevel}${gen}`);
               }}
             >
-              {bots.length > 1 && <Segmented label="Opponent" value={botId} options={botOptions} onChange={(id) => { setBotId(id); setBotLevel((l) => fit(id, l)); }} />}
+              <Segmented label="Opponent" value={botId} options={botOptions} onChange={(id) => { setBotId(id); setBotLevel((l) => fit(id, l)); }} />
               <Segmented label="Your side" value={botSide} options={SIDE_OPTIONS} onChange={setBotSide} />
               {botId === 'hexnet' && <GenerationSlider label="Six's generation" generations={gens.generations} downloadable={gens.downloadable} newest={gens.newest} value={botGen} onChange={setBotGen} />}
-              <Segmented label={isTimedBot(botId) ? `${BOT_META[botId].name} thinking time` : 'Rookie strength'} value={botLevel} options={levelOptions(botId)} onChange={setBotLevel} />
+              <Segmented label={levelName(botId)} value={botLevel} options={levelOptions(botId)} onChange={setBotLevel} />
+              {thinksByPositions(botId, think) && <p className="notice">As strong as {referenceTime(botLevel)} of thinking on a fast PC, on any computer. Change this in Settings.</p>}
               <button type="submit" className="button is-primary">Start match</button>
             </form>
           </RundownRow>
@@ -297,8 +308,8 @@ export function HomeScreen() {
                 <label className="field-label" htmlFor="host-name">Your name</label>
                 <input id="host-name" className="text-input" value={name} maxLength={24} autoComplete="nickname" placeholder="Shown to your friend" onChange={(e) => setName(e.target.value)} />
               </div>
-              {roomBotOptions.length > 1 && <Segmented label="Their opponent" value={friendBot} options={roomBotOptions} onChange={(id) => { setFriendBot(id); setFriendBotLevel((l) => fit(id, l)); }} />}
-              <Segmented label={isTimedBot(friendBot) ? 'Thinking time' : 'Rookie strength'} value={friendBotLevel} options={levelOptions(friendBot)} onChange={setFriendBotLevel} />
+              <Segmented label="Their opponent" value={friendBot} options={roomBotOptions} onChange={(id) => { setFriendBot(id); setFriendBotLevel((l) => fit(id, l)); }} />
+              <Segmented label={levelName(friendBot)} value={friendBotLevel} options={levelOptions(friendBot)} onChange={setFriendBotLevel} />
               <Segmented label="Your friend's side" value={friendBotSide} options={SIDE_OPTIONS} onChange={setFriendBotSide} />
               <button type="submit" className="button is-primary">Create room</button>
               <p className="notice">You get a link to send. When your friend opens it, they play the bot and you watch the game live.</p>
@@ -316,12 +327,12 @@ export function HomeScreen() {
                 navigate(`/watch?xb=${watchXBot}&x=${watchX}&ob=${watchOBot}&o=${watchO}${xg}${og}`);
               }}
             >
-              {bots.length > 1 && <Segmented label="X" value={watchXBot} options={botOptions} onChange={(id) => { setWatchXBot(id); setWatchX((l) => fit(id, l)); }} />}
+              <Segmented label="X" value={watchXBot} options={botOptions} onChange={(id) => { setWatchXBot(id); setWatchX((l) => fit(id, l)); }} />
               {watchXBot === 'hexnet' && <GenerationSlider label="X: Six's generation" generations={gens.generations} downloadable={gens.downloadable} newest={gens.newest} value={watchXGen} onChange={setWatchXGen} />}
-              <Segmented label={`X: ${BOT_META[watchXBot].name} ${isTimedBot(watchXBot) ? 'thinking time' : 'strength'}`} value={watchX} options={levelOptions(watchXBot)} onChange={setWatchX} />
-              {bots.length > 1 && <Segmented label="O" value={watchOBot} options={botOptions} onChange={(id) => { setWatchOBot(id); setWatchO((l) => fit(id, l)); }} />}
+              <Segmented label={`X: ${levelName(watchXBot)}`} value={watchX} options={levelOptions(watchXBot)} onChange={setWatchX} />
+              <Segmented label="O" value={watchOBot} options={botOptions} onChange={(id) => { setWatchOBot(id); setWatchO((l) => fit(id, l)); }} />
               {watchOBot === 'hexnet' && <GenerationSlider label="O: Six's generation" generations={gens.generations} downloadable={gens.downloadable} newest={gens.newest} value={watchOGen} onChange={setWatchOGen} />}
-              <Segmented label={`O: ${BOT_META[watchOBot].name} ${isTimedBot(watchOBot) ? 'thinking time' : 'strength'}`} value={watchO} options={levelOptions(watchOBot)} onChange={setWatchO} />
+              <Segmented label={`O: ${levelName(watchOBot)}`} value={watchO} options={levelOptions(watchOBot)} onChange={setWatchO} />
               <p className="notice">SealBot, Strix and the other rival bots join this lineup once the test arena is built.</p>
               <button type="submit" className="button is-primary">Start broadcast</button>
             </form>
@@ -348,19 +359,7 @@ export function HomeScreen() {
             </div>
           </RundownRow>
 
-          <RundownRow
-            id="training"
-            tag="Training"
-            title="Six training"
-            summary={!training ? 'How the self-taught network is doing' : training.started ? `Generation ${training.generation}${training.paused ? ', paused' : ''}` : 'Not started yet'}
-            open={open === 'training'}
-            onToggle={toggle}
-          >
-            <div className="rundown-form">
-              <p className="notice">Each generation of Six’s network plays itself, learns from those games, and is measured against the one before it.</p>
-              <button type="button" className="button is-primary" onClick={() => navigate('/training')}>Open training</button>
-            </div>
-          </RundownRow>
+          {TrainingHomeRow && <TrainingHomeRow Row={RundownRow} open={open === 'training'} onToggle={toggle} />}
         </ol>
       </aside>
     </main>

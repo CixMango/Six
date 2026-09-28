@@ -1,15 +1,19 @@
-// What the "Import a game" box accepts: a HeXO link, HTTTX text, or a saved replay file (.json).
+// What the "Import a game" box accepts: a HeXO link, HTTTX text, a saved replay file (.json), or a HeXO sandbox
+// position in its notation (opened on the analysis board).
 import type { Hex } from './hex.ts';
 import { parseHexoLink, type HexoLink } from './hexoImport.ts';
 import { fromHtttx, looksLikeHtttx } from './notation.ts';
 import { validateReplay, type ReplayRecord } from './replay.ts';
+import type { Setup } from './rules.ts';
+import { looksLikeHexoNotation, parseHexoNotation } from './setup.ts';
 
 export type GameText =
   | { kind: 'hexo'; link: HexoLink }
   | { kind: 'htttx'; moves: Hex[] }
-  | { kind: 'replay'; record: ReplayRecord };
+  | { kind: 'replay'; record: ReplayRecord }
+  | { kind: 'position'; setup: Setup };
 
-export const IMPORT_HINT = 'Paste a HeXO link or HTTTX notation, or open a saved replay file.';
+export const IMPORT_HINT = 'Paste a HeXO link, HTTTX, or a HeXO position like -xxo/.xxo3x, or open a saved replay file.';
 
 export function parseGameText(text: string): GameText {
   const trimmed = text.trim();
@@ -25,5 +29,6 @@ export function parseGameText(text: string): GameText {
     }
     return { kind: 'replay', record: validateReplay(json) };
   }
+  if (looksLikeHexoNotation(trimmed)) return { kind: 'position', setup: parseHexoNotation(trimmed) };
   throw new Error(IMPORT_HINT);
 }

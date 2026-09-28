@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { currentThinkBy } from '../lib/thinkBy.ts';
+import { thinksByPositions } from '../../shared/thinking.ts';
+import { ThinkingMeter, useThinking } from '../components/ThinkingMeter.tsx';
 import { useLocation, useSearch } from 'wouter';
 import { Flag, LocateFixed, Minus, Plus, RotateCcw, ShieldAlert, Undo2 } from 'lucide-react';
 import type { Hex } from '../../shared/hex.ts';
@@ -55,6 +58,7 @@ export function BotMatchScreen({ offline = false }: { offline?: boolean } = {}) 
   const narrow = useNarrow();
 
   const [thinking, setThinking] = useState(false);
+  const meter = useThinking();
   const [resigned, setResigned] = useState<Player | null>(null);
   const [confirmResign, setConfirmResign] = useState(false);
   const [error, setError] = useState('');
@@ -63,7 +67,10 @@ export function BotMatchScreen({ offline = false }: { offline?: boolean } = {}) 
 
   const savedName = playerName();
   const you = savedName || 'You';
-  const botName = offline ? `Six ${BOT_META[bot].levelLabels[level - 1] ?? ''}`.trim() : botDisplayName(bot, level, generation);
+  const byPositions = thinksByPositions(bot, currentThinkBy());
+  const botName = offline
+    ? byPositions ? `Six level ${level}` : `Six ${BOT_META[bot].levelLabels[level - 1] ?? ''}`.trim()
+    : botDisplayName(bot, level, generation, byPositions);
   const names = { [human]: you, [botSeat]: botName } as Record<Player, string>;
   const [showThreats, toggleThreats] = useThreatHints();
   // Read once per match: switching mid-game would leave judgments half done.
@@ -138,12 +145,13 @@ export function BotMatchScreen({ offline = false }: { offline?: boolean } = {}) 
     const controller = new AbortController();
     setThinking(true);
     setError('');
+    const onProgress = meter.start();
     (async () => {
       const started = performance.now();
       try {
         // Bot thinks while the human's turn is judged; after a blunder it waits for the call to finish.
         const [cells, blundered] = await Promise.all([
-          api.botTurn(game.moves, radius, bot, level, controller.signal, generation),
+          api.botTurn(game.moves, radius, bot, level, controller.signal, generation, onProgress).finally(meter.stop),
           verdict(game.moves.length),
         ]);
         if (blundered) await wait(BLUNDER_CALL_MS + AFTER_BLUNDER_MS);
@@ -164,6 +172,7 @@ export function BotMatchScreen({ offline = false }: { offline?: boolean } = {}) 
       cancelled = true;
       controller.abort();
       setThinking(false);
+      meter.stop();
     };
   }, [botToMove ? game.turn : null, human, game]);
 
@@ -309,6 +318,7 @@ export function BotMatchScreen({ offline = false }: { offline?: boolean } = {}) 
       />
       {/* The public site always plays radius 8. */}
       <ChannelBug tag={item ? 'Retry' : 'VS bot'} detail={offline ? botName : `${botName} · Radius ${radius}`} />
+      <ThinkingMeter progress={meter.progress} />
       <SettingsButton />
       <Scorebug swapColors={retry?.swapColors}
         names={names}

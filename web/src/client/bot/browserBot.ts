@@ -10,11 +10,12 @@ export interface SixBotModule {
   HEAPF32: Float32Array;
   ccall: (name: string, returnType: string | null, argTypes: string[], args: unknown[], opts?: { async?: boolean }) => unknown;
   evaluateBatch?: (planes: number, batch: number, out: number) => Promise<void>;
+  onProgress?: ((nodes: number, ms: number) => void) | null;
 }
 
 export interface BrowserBot {
   /** Plays the rest of the current turn: `moves` is the whole game so far. */
-  turn(moves: readonly Hex[], radius: number, movetimeMs: number, nodes?: number): Promise<Hex[]>;
+  turn(moves: readonly Hex[], radius: number, movetimeMs: number, nodes?: number, onProgress?: (nodes: number, ms: number) => void): Promise<Hex[]>;
   newGame(): void;
   /** The search's score for the side to move after `movetimeMs` (1000 x value, 1000000 for a proven win). */
   evaluate(moves: readonly Hex[], radius: number, movetimeMs: number): Promise<number>;
@@ -102,12 +103,18 @@ export async function createBrowserBot(options: BrowserBotOptions): Promise<Brow
       busy = run.then(() => undefined, () => undefined);
       return run;
     },
-    turn(moves, radius, movetimeMs, nodes = 0) {
+    turn(moves, radius, movetimeMs, nodes = 0, onProgress) {
       // One search at a time: the engine is single-threaded and its tree is shared.
       const run = busy.then(async () => {
         const text = moves.map((m) => `${m.q} ${m.r}`).join(' ');
-        const reply = (await engine.ccall('six_turn', 'string', ['string', 'number', 'number', 'number'],
-          [text, radius, movetimeMs, nodes], { async: true })) as string;
+        engine.onProgress = onProgress ?? null;
+        let reply: string;
+        try {
+          reply = (await engine.ccall('six_turn', 'string', ['string', 'number', 'number', 'number'],
+            [text, radius, movetimeMs, nodes], { async: true })) as string;
+        } finally {
+          engine.onProgress = null;
+        }
         if (reply.startsWith('error')) throw new Error(reply);
         const numbers = reply.trim().split(/\s+/).filter(Boolean).map(Number);
         const stones: Hex[] = [];

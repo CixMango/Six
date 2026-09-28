@@ -157,6 +157,8 @@ std::vector<std::pair<std::string, std::int64_t>> MctsParams::list() const {
           {"rootThreatWide", rootThreatWide ? 1 : 0}};
 }
 
+constexpr auto kProgressEvery = std::chrono::milliseconds(250);
+
 struct Mcts::Impl {
   NetworkEvaluator& evaluator;
   MctsParams params;
@@ -176,6 +178,16 @@ struct Mcts::Impl {
   const std::atomic<bool>* stop = nullptr;
   Clock::time_point deadline = Clock::time_point::max();
   int maxDepth = 0;
+  // A play search's count of new positions this turn (both stones), reported every kProgressEvery while it runs.
+  std::function<void(std::int64_t, int)> progress;
+  Clock::time_point searchStarted{};
+  Clock::time_point lastProgress{};
+  std::int64_t simsBefore = 0;   // finished in earlier phases of this turn
+  std::int32_t phaseRoot = -1;   // the node this phase searches from, and its visits when the phase began
+  std::int64_t phaseStart = 0;
+  std::int64_t simsSoFar() const {
+    return phaseRoot < 0 ? simsBefore : simsBefore + nodes[static_cast<std::size_t>(phaseRoot)].visits - phaseStart;
+  }
 
   Impl(NetworkEvaluator& e, int solverMegabytes) : evaluator(e), solver(solverMegabytes), wideSolver(solverMegabytes) {
     wideSolver.setWide(true);
@@ -396,6 +408,13 @@ struct Mcts::Impl {
         if (visitCap >= 0 && nodes[static_cast<std::size_t>(root)].visits + static_cast<std::int64_t>(leaves.size()) >= visitCap) break;
       }
       flush(root);
+      if (progress) {
+        const auto now = Clock::now();
+        if (now - lastProgress >= kProgressEvery) {
+          lastProgress = now;
+          progress(simsSoFar(), static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(now - searchStarted).count()));
+        }
+      }
     }
   }
 
@@ -664,13 +683,38 @@ SearchResult Mcts::search(const Board& position, const SearchLimits& limits, con
     s.nodes.push_back(Node{});
     root = 0;
   }
-  const std::int64_t visitCap = limits.maxNodes;
+  // A position budget counts new positions over the whole turn, split between the stones like the time.
+  const std::int64_t budget = limits.maxNodes;
   const bool twoStones = s.board.stonesLeft() == 2;
   const int share = twoStones ? s.params.secondStoneShare : 0;
   const auto firstDeadline = started + total * (100 - share) / 100;
-  const std::int64_t firstCap = visitCap >= 0 ? std::max<std::int64_t>(1, visitCap * (100 - share) / 100) : -1;
+  const std::int64_t firstBudget = budget >= 0 ? std::max<std::int64_t>(1, budget * (100 - share) / 100) : -1;
+  s.searchStarted = started;
+  s.lastProgress = started;
+  s.simsBefore = 0;
+  s.phaseRoot = root;
+  s.phaseStart = s.nodes[static_cast<std::size_t>(root)].visits;
+  result.reusedNodes = s.phaseStart;
+  if (onInfo) {
+    s.progress = [&onInfo](std::int64_t sims, int ms) {
+      SearchInfo report;
+      report.progress = true;
+      report.nodes = sims;
+      report.timeMs = ms;
+      onInfo(report);
+    };
+  } else {
+    s.progress = nullptr;
+  }
+  struct EndPhases {
+    Impl& s;
+    ~EndPhases() {
+      s.phaseRoot = -1;
+      s.progress = nullptr;
+    }
+  } endPhases{s};
 
-  s.run(root, firstDeadline, firstCap);
+  s.run(root, firstDeadline, firstBudget >= 0 ? s.phaseStart + firstBudget : -1);
   s.treeRoot = root;
   s.treeMoves = position.moves();
   s.treeRadius = position.radius();
@@ -693,7 +737,11 @@ SearchResult Mcts::search(const Board& position, const SearchLimits& limits, con
         result.stones.push_back(next.winning.front());
       } else if (s.nodes[static_cast<std::size_t>(first)].state != kTerminal) {
         // Re-search from the chosen first stone, keeping its subtree.
-        s.run(first, started + total, visitCap);
+        s.simsBefore = s.simsSoFar();
+        s.phaseRoot = first;
+        s.phaseStart = s.nodes[static_cast<std::size_t>(first)].visits;
+        const std::int64_t left = budget >= 0 ? std::max<std::int64_t>(1, budget - s.simsBefore) : -1;
+        s.run(first, started + total, left >= 0 ? s.phaseStart + left : -1);
         const std::int32_t second = s.mostVisited(first);
         if (second >= 0) result.stones.push_back(s.nodes[static_cast<std::size_t>(second)].move);
       }
@@ -719,7 +767,7 @@ SearchResult Mcts::search(const Board& position, const SearchLimits& limits, con
 
   result.score = static_cast<int>(std::lround(rootValue * 1000.0f));
   result.depth = s.maxDepth;
-  result.nodes = s.nodes[static_cast<std::size_t>(root)].visits;
+  result.nodes = s.simsSoFar();
   result.timeMs = static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - started).count());
   if (onInfo) {
     SearchInfo info;

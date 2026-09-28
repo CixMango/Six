@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { useThinkBy } from '../client/lib/thinkBy.ts';
+import { levelLabel, referenceTime, thinksByPositions, type ThinkBy } from '../shared/thinking.ts';
 import { GameImport } from '../client/components/GameImport.tsx';
 import { parseGameText } from '../shared/gameImport.ts';
 import { reviewInBrowser } from '../client/screens/ReviewScreen.tsx';
@@ -23,7 +25,6 @@ const SIDE_OPTIONS: Array<{ value: SideChoice; label: string }> = [
   { value: 'random', label: 'Random' },
 ];
 
-const LEVEL_OPTIONS = BOT_META.hexweb.levelLabels.map((label, i) => ({ value: i + 1, label }));
 
 type Mode = 'play' | 'watch';
 type WatchBot = 'hexweb' | 'rookie';
@@ -31,7 +32,10 @@ const WATCH_BOTS: Array<{ value: WatchBot; label: string }> = [
   { value: 'hexweb', label: 'Six' },
   { value: 'rookie', label: 'Rookie' },
 ];
-const levelOptions = (bot: WatchBot) => BOT_META[bot].levelLabels.map((label, i) => ({ value: i + 1, label }));
+const levelOptions = (bot: WatchBot, think: ThinkBy) =>
+  BOT_META[bot].levelLabels.map((label, i) => ({ value: i + 1, label: levelLabel(bot, i + 1, label, think) }));
+const levelName = (bot: WatchBot, think: ThinkBy) =>
+  bot === 'rookie' ? 'strength' : thinksByPositions(bot, think) ? 'level · positions per turn' : 'thinking time';
 
 /** Which bot, and its thinking time (Six) or strength (Rookie). */
 function BotPick({ side, bot, level, onBot, onLevel }: {
@@ -41,10 +45,11 @@ function BotPick({ side, bot, level, onBot, onLevel }: {
   onBot: (bot: WatchBot) => void;
   onLevel: (level: number) => void;
 }) {
+  const [think] = useThinkBy();
   return (
     <>
       <Segmented label={`${side} plays`} value={bot} options={WATCH_BOTS} onChange={onBot} />
-      <Segmented label={bot === 'hexweb' ? `${side}'s thinking time` : `${side}'s strength`} value={level} options={levelOptions(bot)} onChange={onLevel} />
+      <Segmented label={`${side}'s ${levelName(bot, think)}`} value={level} options={levelOptions(bot, think)} onChange={onLevel} />
     </>
   );
 }
@@ -110,6 +115,7 @@ async function fetchHexo(text: string): Promise<ImportedGame> {
 
 export function PlayHome() {
   const [, navigate] = useLocation();
+  const [think] = useThinkBy();
   const narrow = useNarrow();
   const board = useRef<BoardHandle>(null);
   const { game, version } = useExhibition();
@@ -184,7 +190,10 @@ export function PlayHome() {
           {mode === 'play' ? (
             <>
               <Segmented label="Your side" value={side} options={SIDE_OPTIONS} onChange={setSide} />
-              <Segmented label="Six's thinking time" value={level} options={LEVEL_OPTIONS} onChange={setLevel} />
+              <Segmented label={`Six's ${levelName('hexweb', think)}`} value={level} options={levelOptions('hexweb', think)} onChange={setLevel} />
+              {thinksByPositions('hexweb', think) && (
+                <p className="notice">As strong as {referenceTime(level)} of thinking on a fast PC, on any computer; slower ones take longer. Change this in Settings.</p>
+              )}
             </>
           ) : (
             <>
@@ -199,6 +208,8 @@ export function PlayHome() {
           if (parsed.kind === 'hexo') {
             const imported = await fetchHexo(text);
             reviewInBrowser(imported.moves, RADIUS, imported.names, imported.swapColors);
+          } else if (parsed.kind === 'position') {
+            throw new Error('Positions open on the analysis board in the Six app (download it from GitHub). Here you can import whole games.');
           } else if (parsed.kind === 'htttx') {
             reviewInBrowser(parsed.moves, RADIUS, { X: 'Player 1', O: 'Player 2' });
           } else {

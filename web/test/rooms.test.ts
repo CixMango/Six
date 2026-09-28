@@ -215,8 +215,8 @@ describe('friend vs bot rooms', () => {
     expect(waiting.status).toBe('waiting');
     expect(waiting.watching).toBe(true);
     expect(waiting.you).toBeNull();
-    expect(waiting.bot).toEqual({ name: 'Six 1 s', seat: 'O' });
-    expect(waiting.seats.O).toEqual({ name: 'Six 1 s', connected: true });
+    expect(waiting.bot).toEqual({ name: 'Six level 2', seat: 'O' });
+    expect(waiting.seats.O).toEqual({ name: 'Six level 2', connected: true });
     expect(waiting.seats.X).toBeNull();
 
     say(friend, { type: 'room:join', code: waiting.code });
@@ -257,7 +257,7 @@ describe('friend vs bot rooms', () => {
     await settle();
     say(friend, { type: 'game:resign' });
     expect(host.room!.result).toEqual({ winner: 'O', reason: 'resign' });
-    expect(saved.at(-1)!.players.O).toEqual({ name: 'Six 1 s', kind: 'bot', bot: 'hexnet:2' });
+    expect(saved.at(-1)!.players.O).toEqual({ name: 'Six level 2', kind: 'bot', bot: 'hexnet:2' });
     expect(saved.at(-1)!.players.X).toEqual({ name: 'Sam', kind: 'human' });
 
     answers.push([[0, 0]]);
@@ -266,7 +266,7 @@ describe('friend vs bot rooms', () => {
     // Colors swap: the bot now opens as X, the friend plays O.
     expect(friend.room!.status).toBe('playing');
     expect(friend.room!.you).toBe('O');
-    expect(friend.room!.bot).toEqual({ name: 'Six 1 s', seat: 'X' });
+    expect(friend.room!.bot).toEqual({ name: 'Six level 2', seat: 'X' });
     expect(friend.room!.moves).toEqual([[0, 0]]);
   });
 

@@ -11,6 +11,9 @@ import { App } from './App.tsx';
 applyTheme(currentTheme());
 applyBloom(bloomOn());
 
+// The downloaded app stops a while after the last page closes; open pages check in so it keeps running.
+setInterval(() => void fetch('/api/alive').catch(() => undefined), 60_000);
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

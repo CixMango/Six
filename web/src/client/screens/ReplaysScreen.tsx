@@ -40,7 +40,7 @@ export function ReplaysScreen() {
         <header className="library-header">
           <h1 className="library-title caps">Replays</h1>
           <p className="notice">Every finished game on this PC. Open one for the coach's review of every turn.</p>
-          <GameImport onImport={async (text) => navigate(`/review/${await api.importGame(text)}`)} />
+          <GameImport onImport={async (text) => navigate(await api.importGame(text))} />
         </header>
 
         {error && <p className="error-text">Replays could not load: {error}</p>}
@@ -78,7 +78,7 @@ export function ReplaysScreen() {
                 {replays.map((r) => (
                   <tr key={r.id} style={swappedTeamColors(r.swapColors)}>
                     <td>
-                      <Link href={`/review/${r.id}`} className="row-link">
+                      <Link href={r.setup ? `/analysis/${r.id}` : `/review/${r.id}`} className="row-link">
                         {when.format(new Date(r.createdAt))}
                       </Link>
                     </td>

@@ -10,13 +10,15 @@ Play it in the browser at **https://playsix.cixmango.workers.dev**, or download 
 
 ## Download
 
-From [Releases](https://github.com/CixMango/Six/releases):
+From [Releases](https://github.com/CixMango/Six/releases), the installer for your computer:
 
-- **Windows:** `Six-<version>-windows-x64.zip`. Unzip it anywhere and double-click `Start Six.cmd`. Runs the bot on any DirectX 12 GPU (NVIDIA, AMD or Intel).
-- **Linux:** `Six-<version>-linux-x64.tar.gz`. Extract it and run `./start-six.sh`. Runs the bot on AMD, Intel and NVIDIA graphics cards (through Vulkan; NVIDIA uses CUDA instead when CUDA 12 and cuDNN 9 are installed), and on the CPU if there's no usable card.
-- **macOS (Apple Silicon):** `Six-<version>-macos-arm64.zip`. Unzip it, then right-click `Start Six.command` and choose **Open** (needed once, since the app isn't from the App Store). Runs the bot on the Mac's GPU through Metal.
+- **Windows:** `Six-<version>-Setup-windows.exe`. A setup wizard: no admin rights needed, adds Six to the Start menu (and the desktop, if you like). Runs the bot on any DirectX 12 GPU (NVIDIA, AMD or Intel).
+- **macOS (Apple Silicon):** `Six-<version>-Setup-macos.pkg`. Puts Six in the Applications folder in your home folder. The first time, right-click the file and choose **Open** (the installer isn't from the App Store). Runs the bot on the Mac's GPU through Metal.
+- **Linux (Ubuntu, Debian, Mint, ...):** `Six-<version>-Setup-linux.deb`. Opens in your Software app; then start Six from your apps menu. Runs the bot on AMD, Intel and NVIDIA graphics cards (through Vulkan; NVIDIA uses CUDA instead when CUDA 12 and cuDNN 9 are installed), and on the CPU if there's no usable card.
 
-Nothing else to install. The download runs the native engine with the newest network, so at the same thinking time it searches far more than the browser version, and you can give it up to 45 s a turn.
+Six opens in your browser, with no window of its own; quit it from Settings (it also stops by itself a few minutes after its last tab closes). Each time it starts it checks for a new version and offers to update, keeping your saved games.
+
+Or the portable downloads, which run from any folder: `Six-<version>-windows-x64.zip` (double-click `Six`), `Six-<version>-macos-arm64.zip` (right-click `Start Six.command`, **Open**), `Six-<version>-linux-x64.tar.gz` (run `./start-six.sh`).
 
 ## Strategy guide
 
@@ -28,9 +30,10 @@ Nothing else to install. The download runs the native engine with the newest net
 - Play a friend over a LAN or Hamachi (they just open a link)
 - Watch bots play each other
 - Game review: every turn labelled (best, mistake, blunder, allowed a forced win, ...), Six's better move, the follow-up line, and "retry from here"
-- Import games from HeXO links, HTTTX notation or replay files; export any game as HTTTX or a replay file
-- Analysis board and saved replays
-- Training dashboard for the self-play loop
+- Import games from HeXO links, HTTTX notation or replay files, and HeXO sandbox positions; export any game as HTTTX or a replay file
+- Analysis board with free placement (set up any position, choose who moves) and Six's suggested turn for either side
+- Six thinks by positions by default, so it plays at the same strength on any computer (slower ones just take longer); it can think by time instead
+- Saved replays
 
 ## Running from source (Windows)
 

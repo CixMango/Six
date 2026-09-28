@@ -174,3 +174,61 @@ TEST_CASE("engine agrees with the TypeScript rules on every stone of 240 games")
   std::cout << "        checked " << positions << " positions\n";
   CHECK(positions > 10000);
 }
+
+TEST_CASE("engine agrees with the TypeScript rules on set-up positions and play from them") {
+  std::ifstream in(SIX_FIXTURES "/setups.txt");
+  CHECK(in.good());
+  std::string line;
+  six::Board board(8);
+  std::string id = "?";
+  int positions = 0;
+  int reported = 0;
+  while (std::getline(in, line)) {
+    if (line.empty() || line[0] == '#') continue;
+    std::istringstream ss(line);
+    std::string kind;
+    ss >> kind;
+    if (kind == "setup") {
+      int radius = 8;
+      std::string toMove;
+      int left = 2;
+      ss >> id >> radius >> toMove >> left;
+      std::vector<std::pair<six::Hex, six::Player>> stones;
+      for (std::string owner; ss >> owner && owner != "|";) {
+        int q = 0;
+        int r = 0;
+        ss >> q >> r;
+        stones.push_back({{q, r}, owner == "x" ? six::Player::X : six::Player::O});
+      }
+      board = six::Board(radius);
+      if (!board.setup(stones, toMove == "X" ? six::Player::X : six::Player::O, left)) {
+        six::testing::fail(__FILE__, __LINE__, "setup " + id + " refused");
+        return;
+      }
+    } else if (kind == "stone") {
+      int q = 0;
+      int r = 0;
+      ss >> q >> r;
+      if (board.place({q, r}) != six::PlaceError::None) {
+        six::testing::fail(__FILE__, __LINE__, "setup " + id + " stone " + std::to_string(q) + "," + std::to_string(r) + " rejected");
+        return;
+      }
+    }
+    const auto facts = engineFacts(board);
+    std::string token;
+    while (ss >> token) {
+      const auto eq = token.find('=');
+      const std::string key = token.substr(0, eq);
+      const std::string expected = token.substr(eq + 1);
+      const auto it = facts.find(key);
+      const std::string actual = it == facts.end() ? "<missing>" : it->second;
+      if (actual != expected && reported++ < 20) {
+        six::testing::fail(__FILE__, __LINE__, "setup " + id + " at " + std::to_string(board.stones()) + " stones: " + key +
+                                                   " is " + actual + ", TypeScript says " + expected);
+      }
+    }
+    ++positions;
+  }
+  std::cout << "        checked " << positions << " positions\n";
+  CHECK(positions > 3000);
+}

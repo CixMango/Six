@@ -46,7 +46,7 @@ export interface RoomManagerOptions {
   random?: () => number;
   setTimer?: (fn: () => void, ms: number) => Cancel;
   graceMs?: number;
-  botTurn?: (moves: Hex[], radius: number, bot: string, level: number) => Promise<Hex[]>;
+  botTurn?: (moves: Hex[], radius: number, bot: string, level: number, byTime?: boolean) => Promise<Hex[]>;
   judge?: (moves: Hex[], radius: number) => Promise<Evaluation>;
   precheck?: (moves: Hex[], radius: number) => Promise<void>;
 }
@@ -252,7 +252,7 @@ export class RoomManager {
     const stones = room.game.moves.length;
     room.botThinking = true;
     // The bot thinks while the friend's turn is judged; after a blunder it holds its answer until the call is shown.
-    void Promise.all([botTurn([...room.game.moves], room.radius, room.bot.id, room.bot.level), this.blundered(room)])
+    void Promise.all([botTurn([...room.game.moves], room.radius, room.bot.id, room.bot.level, room.bot.byTime), this.blundered(room)])
       .then(([cells, blundered]) =>
         blundered ? new Promise<Hex[]>((resolve) => this.setTimer(() => resolve(cells), BLUNDER_CALL_MS + AFTER_BLUNDER_MS)) : cells)
       .then((cells) => {
@@ -316,7 +316,7 @@ export class RoomManager {
     if (room.game.moves.length > 0) {
       const player = (side: Player) =>
         room.seats[side] === BOT_SEAT && room.bot
-          ? { name: botName(room.bot.id, room.bot.level), kind: 'bot' as const, bot: `${room.bot.id}:${room.bot.level}` }
+          ? { name: botName(room.bot.id, room.bot.level, null, room.bot.id === 'hexnet' && !room.bot.byTime), kind: 'bot' as const, bot: `${room.bot.id}:${room.bot.level}` }
           : { name: this.clients.get(room.seats[side] ?? '')?.name ?? 'Player', kind: 'human' as const };
       const record = buildReplay({
         game: room.game,
@@ -337,7 +337,7 @@ export class RoomManager {
     const seat = (side: Player) => {
       const id = room.seats[side];
       if (!id) return null;
-      if (id === BOT_SEAT && room.bot) return { name: botName(room.bot.id, room.bot.level), connected: true };
+      if (id === BOT_SEAT && room.bot) return { name: botName(room.bot.id, room.bot.level, null, room.bot.id === 'hexnet' && !room.bot.byTime), connected: true };
       return { name: this.clients.get(id)?.name ?? 'Player', connected: this.isConnected(id) };
     };
     const g = room.game;
@@ -359,7 +359,7 @@ export class RoomManager {
       replayId: room.replayId,
       you: this.sideOf(room, forClient),
       gameNumber: room.gameNumber,
-      bot: room.bot ? { name: botName(room.bot.id, room.bot.level), seat: room.seats.X === BOT_SEAT ? 'X' : 'O' } : null,
+      bot: room.bot ? { name: botName(room.bot.id, room.bot.level, null, room.bot.id === 'hexnet' && !room.bot.byTime), seat: room.seats.X === BOT_SEAT ? 'X' : 'O' } : null,
       watching: room.host !== null && room.host === forClient,
     };
   }

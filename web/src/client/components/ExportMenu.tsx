@@ -31,8 +31,15 @@ function download(name: string, text: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// `record` builds the replay file on demand (the app fetches the saved one).
-export function ExportMenu({ moves, record, up = false }: { moves: readonly Hex[]; record: () => Promise<ReplayRecord>; up?: boolean }) {
+// `record` builds the replay file on demand (the app fetches the saved one). `position` (analysis board) adds HeXO's
+// position notation; with `setUp` the moves start from a set-up position, which HTTTX can't describe.
+export function ExportMenu({ moves, record, up = false, position, setUp = false }: {
+  moves: readonly Hex[];
+  record: () => Promise<ReplayRecord>;
+  up?: boolean;
+  position?: () => string;
+  setUp?: boolean;
+}) {
   const [note, setNote] = useState('');
   const flash = (text: string) => {
     setNote(text);
@@ -46,7 +53,8 @@ export function ExportMenu({ moves, record, up = false }: { moves: readonly Hex[
           type="button"
           role="menuitem"
           className="button is-quiet"
-          disabled={moves.length === 0}
+          disabled={moves.length === 0 || setUp}
+          title={setUp ? 'HTTTX only describes games played from an empty board' : undefined}
           onClick={async (e) => {
             flash((await copyText(toHtttx(moves))) ? 'Copied' : 'Copy failed');
             e.currentTarget.closest('details')?.removeAttribute('open');
@@ -54,11 +62,25 @@ export function ExportMenu({ moves, record, up = false }: { moves: readonly Hex[
         >
           Copy HTTTX notation
         </button>
+        {position && (
+          <button
+            type="button"
+            role="menuitem"
+            className="button is-quiet"
+            onClick={async (e) => {
+              const text = position();
+              flash(text && (await copyText(text)) ? 'Copied' : 'Copy failed');
+              e.currentTarget.closest('details')?.removeAttribute('open');
+            }}
+          >
+            Copy HeXO position
+          </button>
+        )}
         <button
           type="button"
           role="menuitem"
           className="button is-quiet"
-          disabled={moves.length === 0}
+          disabled={moves.length === 0 && !setUp}
           onClick={async (e) => {
             const details = e.currentTarget.closest('details');
             try {

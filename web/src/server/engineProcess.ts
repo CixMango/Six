@@ -1,6 +1,17 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import type { Hex } from '../shared/hex.ts';
+import type { Setup } from '../shared/rules.ts';
+import { positionCommand } from '../shared/setup.ts';
+
+export interface SearchExtras {
+  /** Stop after this many new positions (both stones) instead of a time. */
+  nodes?: number | null;
+  /** How many positions so far and after how long, a few times a second. */
+  onProgress?: (nodes: number, ms: number) => void;
+}
+
+const NODE_SEARCH_LIMIT_MS = 60 * 60 * 1000;
 
 // Long-running engine process (protocol in engine/src/main.cpp). One search at a time; restarts if it dies.
 export class EngineProcess {
@@ -34,16 +45,22 @@ export class EngineProcess {
     return this.child !== null && this.child.exitCode === null;
   }
 
-  bestTurn(moves: readonly Hex[], radius: number, moveTimeMs: number): Promise<Hex[]> {
-    return this.search(moves, radius, moveTimeMs).then((r) => r.cells);
+  bestTurn(moves: readonly Hex[], radius: number, moveTimeMs: number, extra: SearchExtras = {}): Promise<Hex[]> {
+    return this.search(moves, radius, moveTimeMs, null, extra).then((r) => r.cells);
   }
 
   // score is from the side to move.
-  search(moves: readonly Hex[], radius: number, moveTimeMs: number): Promise<{ cells: Hex[]; score: number | null }> {
+  search(
+    moves: readonly Hex[],
+    radius: number,
+    moveTimeMs: number,
+    setup: Setup | null = null,
+    extra: SearchExtras = {},
+  ): Promise<{ cells: Hex[]; score: number | null }> {
     if (this.idleTimer) clearTimeout(this.idleTimer);
     this.idleTimer = null;
     this.pending++;
-    const run = this.queue.then(() => this.request(moves, radius, moveTimeMs));
+    const run = this.queue.then(() => this.request(moves, radius, moveTimeMs, setup, extra));
     this.queue = run.catch(() => undefined);
     const done = () => {
       this.pending--;
@@ -102,10 +119,18 @@ export class EngineProcess {
     return child;
   }
 
-  private request(moves: readonly Hex[], radius: number, moveTimeMs: number): Promise<{ cells: Hex[]; score: number | null }> {
+  private request(
+    moves: readonly Hex[],
+    radius: number,
+    moveTimeMs: number,
+    setup: Setup | null,
+    extra: SearchExtras,
+  ): Promise<{ cells: Hex[]; score: number | null }> {
     const child = this.ensureStarted();
     const grace = this.startedFresh ? 180_000 : 10_000;
     this.startedFresh = false;
+    // A position budget has no time limit; a slow PC can take minutes at the top levels.
+    const limitMs = extra.nodes ? NODE_SEARCH_LIMIT_MS : moveTimeMs;
     let score: number | null = null;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -113,7 +138,7 @@ export class EngineProcess {
         if (this.child === child) this.child = null;
         child.kill();
         reject(new Error('The engine did not answer in time.'));
-      }, moveTimeMs + grace);
+      }, limitMs + grace);
       const onStop = (why: string) => {
         cleanup();
         reject(new Error(`The engine stopped (${why})${this.said.length ? `: ${this.said.join(' / ')}` : ''}`));
@@ -121,6 +146,8 @@ export class EngineProcess {
       const onLine = (line: string) => {
         const info = /^info .*\bscore (-?\d+)/.exec(line);
         if (info) score = Number(info[1]);
+        const progress = /^info nodes (\d+) time (\d+)$/.exec(line);
+        if (progress) extra.onProgress?.(Number(progress[1]), Number(progress[2]));
         if (line.startsWith('error')) {
           cleanup();
           reject(new Error(`Engine ${line}`));
@@ -144,9 +171,8 @@ export class EngineProcess {
       };
       this.listeners.add(onLine);
       this.stopListeners.add(onStop);
-      const flat = moves.map((m) => `${m.q} ${m.r}`).join(' ');
-      child.stdin.write(`position radius ${radius}${flat ? ` moves ${flat}` : ''}\n`);
-      child.stdin.write(`go movetime ${Math.round(moveTimeMs)}\n`);
+      child.stdin.write(`${positionCommand(radius, moves, setup)}\n`);
+      child.stdin.write(extra.nodes ? `go nodes ${Math.round(extra.nodes)}\n` : `go movetime ${Math.round(moveTimeMs)}\n`);
     });
   }
 }

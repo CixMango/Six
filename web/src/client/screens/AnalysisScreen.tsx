@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useParams, useSearch } from 'wouter';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, GraduationCap, Lightbulb, LocateFixed, Minus, Plus, ShieldAlert } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, GraduationCap, Lightbulb, LocateFixed, Minus, PencilLine, Plus, ShieldAlert } from 'lucide-react';
 import type { Hex } from '../../shared/hex.ts';
-import { Game, playerForStone, type Player } from '../../shared/rules.ts';
+import { Game, otherPlayer, type Player, type Setup } from '../../shared/rules.ts';
 import type { ReplayRecord } from '../../shared/replay.ts';
+import { parseHexoNotation, positionFor, setupFromGame, toHexoNotation } from '../../shared/setup.ts';
 import { threatWindows } from '../../shared/tactics.ts';
+import type { Evaluation } from '../../shared/winChance.ts';
 import { BoardCanvas, type BoardHandle } from '../board/BoardCanvas.tsx';
 import type { BoardMark } from '../board/renderer.ts';
 import { BlunderCall, ChannelBug, Dock, LowerThird, Scorebug, Segmented } from '../components/Broadcast.tsx';
+import { SettingsButton } from '../components/Settings.tsx';
+import { ThinkingMeter, useThinking } from '../components/ThinkingMeter.tsx';
 import { api } from '../lib/api.ts';
 import { lastMoveInfo } from '../lib/gameView.ts';
 import { useNarrow } from '../lib/useNarrow.ts';
@@ -15,6 +19,16 @@ import { useWinChance } from '../lib/useWinChance.ts';
 import { swappedTeamColors } from '../lib/teamColors.ts';
 import { ExportMenu } from '../components/ExportMenu.tsx';
 import { buildReplay, newReplayId } from '../../shared/replay.ts';
+
+/** What a click on the board does: play the side to move's stone, or edit the position freely. */
+type Tool = 'turn' | 'X' | 'O' | 'erase';
+
+const TOOL_OPTIONS: Array<{ value: Tool; label: string }> = [
+  { value: 'turn', label: 'Play' },
+  { value: 'X', label: 'X' },
+  { value: 'O', label: 'O' },
+  { value: 'erase', label: 'Erase' },
+];
 
 export function AnalysisScreen() {
   const [, navigate] = useLocation();
@@ -27,12 +41,21 @@ export function AnalysisScreen() {
   const [record, setRecord] = useState<ReplayRecord | null>(null);
   const [loadError, setLoadError] = useState('');
   const [radius, setRadius] = useState<8 | 9>(8);
+  // A set-up position the moves start from (free placement or an imported HeXO position), or null for an empty board.
+  const [setup, setSetup] = useState<Setup | null>(null);
   const [line, setLine] = useState<Hex[]>([]);
   const [cursor, setCursor] = useState(0);
   const [showThreats, setShowThreats] = useState(true);
-  const [suggestion, setSuggestion] = useState<{ at: number; cells: Hex[] } | null>(null);
-  const [suggesting, setSuggesting] = useState(false);
+  const [editOpen, setEditOpen] = useState(() => !narrow);
+  const [tool, setTool] = useState<Tool>('turn');
+  const [picking, setPicking] = useState(false);
+  const [suggestion, setSuggestion] = useState<{ key: string; side: Player; cells: Hex[] } | null>(null);
+  const [suggesting, setSuggesting] = useState<Player | null>(null);
+  const [suggestError, setSuggestError] = useState('');
+  const [pasted, setPasted] = useState('');
+  const [pasteError, setPasteError] = useState('');
   const [version, setVersion] = useState(0);
+  const meter = useThinking();
 
   useEffect(() => {
     if (!id) return;
@@ -41,6 +64,7 @@ export function AnalysisScreen() {
       .then((r) => {
         setRecord(r);
         setRadius(r.radius === 8 ? 8 : 9);
+        setSetup(r.setup ?? null);
         const moves = r.moves.map(([q, r2]) => ({ q, r: r2 }));
         setLine(moves);
         setCursor(Number.isInteger(at) && at > 0 ? Math.min(at, moves.length) : moves.length);
@@ -50,11 +74,34 @@ export function AnalysisScreen() {
   }, [id]);
 
   const original = useMemo(() => record?.moves.map(([q, r]) => ({ q, r })) ?? null, [record]);
-  const inVariation = original !== null && (line.length !== original.length || line.some((m, i) => m.q !== original[i]!.q || m.r !== original[i]!.r));
+  const inVariation =
+    original !== null &&
+    (JSON.stringify(setup) !== JSON.stringify(record?.setup ?? null) ||
+      line.length !== original.length ||
+      line.some((m, i) => m.q !== original[i]!.q || m.r !== original[i]!.r));
 
-  const game = useMemo(() => Game.fromMoves(line.slice(0, cursor), radius), [line, cursor, radius]);
-  // Each position is judged while stepping through; a blunder marks the stone that lost the game.
-  const { chance, blunder } = useWinChance(game.moves, radius, game.winner, true, false);
+  const start = useMemo(() => new Game(radius, setup), [radius, setup]);
+  const game = useMemo(() => Game.fromMoves(line.slice(0, cursor), radius, setup), [line, cursor, radius, setup]);
+  const positionKey = useMemo(() => JSON.stringify([radius, setup, line.slice(0, cursor)]), [radius, setup, line, cursor]);
+
+  // Games from an empty board are judged stone by stone (blunders included); a set-up position just gets its chance.
+  const { chance: gameChance, blunder } = useWinChance(game.moves, radius, game.winner, setup === null, false);
+  const [setupChance, setSetupChance] = useState<Evaluation | null>(null);
+  useEffect(() => {
+    setSetupChance(null);
+    if (!setup) return;
+    if (game.winner) {
+      setSetupChance({ winX: game.winner === 'X' ? 1 : 0, proven: game.winner });
+      return;
+    }
+    const abort = new AbortController();
+    api
+      .evaluate(game.moves, radius, abort.signal, false, setup)
+      .then((e) => setSetupChance({ winX: e.winX, proven: e.proven }))
+      .catch(() => undefined);
+    return () => abort.abort();
+  }, [positionKey]);
+  const chance = setup ? setupChance : gameChance;
 
   const go = (n: number) => {
     const next = Math.max(0, Math.min(line.length, n));
@@ -73,12 +120,42 @@ export function AnalysisScreen() {
       else if (e.key === 'ArrowRight') go(cursor + 1);
       else if (e.key === 'Home') go(0);
       else if (e.key === 'End') go(line.length);
+      else if (e.key === 'Escape') setPicking(false);
       else return;
       e.preventDefault();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
+
+  /** Starts over from `next`: the moves so far become part of the position. */
+  const startFrom = (next: Setup | null, moves: Hex[] = []) => {
+    setSetup(next);
+    setLine(moves);
+    setCursor(moves.length);
+    setSuggestion(null);
+    setVersion((v) => v + 1);
+  };
+
+  // The side to move and stones left, as the controls show them (after a six: the loser's turn).
+  const sideToMove: Player = game.winner ? otherPlayer(game.winner) : game.current;
+  const stonesLeft: 1 | 2 = game.winner ? 2 : game.stonesLeft === 1 ? 1 : 2;
+
+  const activeTool: Tool = editOpen ? tool : 'turn';
+
+  const editCell = (cell: Hex) => {
+    const owner = game.stoneAt(cell.q, cell.r);
+    if (activeTool === 'erase' && !owner) return;
+    const stones = setupFromGame(game, sideToMove, stonesLeft).stones.filter((s) => s.q !== cell.q || s.r !== cell.r);
+    // Clicking a stone of the colour being placed takes it off again.
+    if ((activeTool === 'X' || activeTool === 'O') && owner !== activeTool) stones.push({ q: cell.q, r: cell.r, player: activeTool });
+    startFrom({ stones, toMove: sideToMove, stonesLeft });
+  };
+
+  const setTurn = (side: Player, left: 1 | 2) => {
+    if (side === sideToMove && left === stonesLeft && !game.winner) return;
+    startFrom(setupFromGame(game, side, left));
+  };
 
   const onPlace = (cell: Hex) => {
     if (game.winner || !game.isPlayable(cell.q, cell.r)) return;
@@ -89,34 +166,55 @@ export function AnalysisScreen() {
     setVersion((v) => v + 1);
   };
 
-  const suggest = async () => {
-    if (game.winner) return;
-    setSuggesting(true);
+  const suggest = async (side: Player) => {
+    setPicking(false);
+    setSuggestError('');
+    setSuggesting(side);
+    const key = positionKey;
     try {
-      const cells = await api.botTurn(game.moves, radius, 'rookie', 5);
-      setSuggestion({ at: cursor, cells });
-    } catch {
+      const pos = positionFor(game, side);
+      const cells = await api.suggest(pos.moves, radius, pos.setup, undefined, meter.start()).finally(meter.stop);
+      setSuggestion({ key, side, cells });
+    } catch (e) {
       setSuggestion(null);
+      setSuggestError((e as Error).message);
     } finally {
-      setSuggesting(false);
+      setSuggesting(null);
     }
   };
+  const shown = suggestion && suggestion.key === positionKey ? suggestion : null;
 
   const playSuggestion = () => {
-    if (!suggestion) return;
-    const next = [...line.slice(0, cursor), ...suggestion.cells];
-    const probe = Game.fromMoves(line.slice(0, cursor), radius);
+    if (!shown) return;
+    const pos = positionFor(game, shown.side);
+    const probe = Game.fromMoves(pos.moves, radius, pos.setup);
     const legal: Hex[] = [];
-    for (const c of suggestion.cells) {
+    for (const c of shown.cells) {
       if (!probe.place(c.q, c.r).ok) break;
       legal.push(c);
       if (probe.winner) break;
     }
-    const applied = next.slice(0, cursor + legal.length);
-    setLine(applied);
-    setCursor(applied.length);
-    setSuggestion(null);
-    setVersion((v) => v + 1);
+    if (pos.setup === setup) {
+      const next = [...line.slice(0, cursor), ...legal];
+      setLine(next);
+      setCursor(next.length);
+      setSuggestion(null);
+      setVersion((v) => v + 1);
+    } else {
+      // Not that side's turn: the position is set up with them to move, then their stones are played.
+      startFrom(pos.setup, legal);
+    }
+  };
+
+  const loadPasted = () => {
+    try {
+      startFrom(parseHexoNotation(pasted));
+      setPasted('');
+      setPasteError('');
+      setTimeout(() => board.current?.recenter(), 0);
+    } catch (e) {
+      setPasteError((e as Error).message);
+    }
   };
 
   const marks = useMemo<BoardMark[]>(() => {
@@ -134,11 +232,11 @@ export function AnalysisScreen() {
         }
       }
     }
-    if (suggestion && suggestion.at === cursor) {
-      for (const cell of suggestion.cells) out.push({ cell, player: game.current, kind: 'ghost' });
+    if (shown) {
+      for (const cell of shown.cells) out.push({ cell, player: shown.side, kind: 'ghost' });
     }
     return out;
-  }, [game, showThreats, suggestion, cursor]);
+  }, [game, showThreats, shown]);
 
   const names: Record<Player, string> = {
     X: record?.players.X.name ?? 'X side',
@@ -154,18 +252,31 @@ export function AnalysisScreen() {
   if (loadError) {
     title = 'Replay not found';
     detail = loadError;
+  } else if (suggesting) {
+    title = `Six is thinking about ${names[suggesting]}’s turn`;
+    detail = 'The newest Six network, thinking for a few seconds.';
+  } else if (shown) {
+    const turnNote = shown.side === game.current && !game.winner ? '' : ` It isn’t ${names[shown.side]}’s turn, so playing it gives them the turn.`;
+    title = `Six’s pick for ${names[shown.side]}`;
+    detail = `The ${shown.cells.length === 1 ? 'marked stone' : 'two marked stones'}, from the newest Six network.${turnNote}`;
+  } else if (suggestError) {
+    title = 'Six couldn’t suggest a turn';
+    detail = suggestError;
+  } else if (activeTool !== 'turn') {
+    title = activeTool === 'erase' ? 'Erasing stones' : `Placing ${activeTool} stones`;
+    detail =
+      activeTool === 'erase'
+        ? 'Click a stone to take it off. Pick Play to go back to taking turns.'
+        : 'Click any cell. Click one of these stones again to take it off.';
   } else if (game.winner) {
     title = `${names[game.winner]} has six in a row`;
     detail = (
       <>
-        Turn {game.turn} · {game.moves.length} stones
+        Turn {game.turn} · {game.stones.length} stones
       </>
     );
-  } else if (suggestion && suggestion.at === cursor) {
-    title = `Rookie suggests the ${suggestion.cells.length === 1 ? 'marked stone' : 'two marked stones'}`;
-    detail = 'A placeholder bot, not the trained engine. Treat it as a second opinion.';
   } else {
-    title = game.moves.length === 0 ? 'Empty board: X opens' : `${names[game.current]} to place ${game.stonesLeft}`;
+    title = game.stones.length === 0 ? 'Empty board: X opens' : `${names[game.current]} to place ${game.stonesLeft}`;
     const threatText =
       xThreats + oThreats === 0
         ? 'No open fours on the board.'
@@ -174,6 +285,7 @@ export function AnalysisScreen() {
   }
 
   const turnLabel = `Stone ${cursor} of ${line.length}`;
+  const freePlace = activeTool === 'turn' ? undefined : { player: activeTool === 'erase' ? null : activeTool };
 
   return (
     <main className="stage analysis" style={swappedTeamColors(record?.swapColors)}>
@@ -182,19 +294,77 @@ export function AnalysisScreen() {
         ref={board}
         game={game}
         version={version}
-        interactive={!game.winner}
-        onPlace={onPlace}
+        interactive={Boolean(freePlace) || !game.winner}
+        onPlace={freePlace ? editCell : onPlace}
+        freePlace={freePlace}
         marks={marks}
         alarm={Boolean(chance?.proven) && !game.winner}
         label="Analysis board"
-        inset={narrow ? { top: 150, right: 16, bottom: 300, left: 16 } : { top: 110, right: 24, bottom: 170, left: 24 }}
+        inset={narrow ? { top: 150, right: 16, bottom: 300, left: 16 } : { top: 110, right: 24, bottom: 170, left: editOpen ? 300 : 24 }}
       />
-      <ChannelBug tag={record ? 'Replay' : 'Analysis'} detail={record ? `${names.X} vs ${names.O} · Radius ${radius}` : `Radius ${radius}`} />
+      <ChannelBug
+        tag={record ? 'Replay' : 'Analysis'}
+        detail={`${record ? `${names.X} vs ${names.O} · ` : ''}${setup ? 'Set-up position · ' : ''}Radius ${radius}`}
+      />
+      <SettingsButton />
+      <ThinkingMeter progress={meter.progress} />
       <Scorebug swapColors={record?.swapColors} names={names} lastMove={lastMoveInfo(game)} onShowLastStone={() => board.current?.showLastStone()} current={game.current} stonesLeft={game.stonesLeft} turn={game.turn} winner={game.winner} finished={game.winner !== null} chance={chance} />
       <BlunderCall blunder={blunder} names={names} />
 
-      <LowerThird title={title} detail={detail} player={game.winner ?? game.current}>
-        {suggestion && suggestion.at === cursor && (
+      {editOpen && (
+        <section className="edit-panel plate" aria-label="Edit the board">
+          <header className="edit-panel-header">
+            <h2 className="edit-panel-title caps">Board</h2>
+            <p className="edit-panel-note">Set up any position. Edits start a new line from here.</p>
+          </header>
+          <Segmented label="Clicks" value={tool} options={TOOL_OPTIONS} onChange={setTool} />
+          <div className="edit-panel-row">
+            <Segmented
+              label="To move"
+              value={sideToMove}
+              options={[{ value: 'X', label: 'X' }, { value: 'O', label: 'O' }]}
+              onChange={(side) => setTurn(side, stonesLeft)}
+            />
+            <Segmented
+              label="Stones left"
+              value={stonesLeft}
+              options={[{ value: 2, label: '2' }, { value: 1, label: '1' }]}
+              onChange={(left) => setTurn(sideToMove, left)}
+            />
+          </div>
+          <form
+            className="edit-panel-paste"
+            onSubmit={(e) => {
+              e.preventDefault();
+              loadPasted();
+            }}
+          >
+            <label className="field-label" htmlFor="paste-position">HeXO position</label>
+            <div className="edit-panel-paste-row">
+              <input
+                id="paste-position"
+                className="text-input"
+                value={pasted}
+                onChange={(e) => {
+                  setPasted(e.target.value);
+                  setPasteError('');
+                }}
+                placeholder="-xxo/.xxo3x, d @(4, 5) x A0 A1"
+                spellCheck={false}
+                autoComplete="off"
+              />
+              <button type="submit" className="button" disabled={!pasted.trim()}>Load</button>
+            </div>
+            {pasteError && <p className="error-text" role="alert">{pasteError}</p>}
+          </form>
+          <button type="button" className="button is-quiet edit-panel-clear" onClick={() => startFrom(null)} disabled={game.stones.length === 0 && !setup}>
+            Clear the board
+          </button>
+        </section>
+      )}
+
+      <LowerThird title={title} detail={detail} player={shown?.side ?? suggesting ?? game.winner ?? game.current}>
+        {shown && (
           <div className="lt-actions">
             <button type="button" className="button" onClick={playSuggestion}>Play it</button>
             <button type="button" className="button is-quiet" onClick={() => setSuggestion(null)}>Dismiss</button>
@@ -223,7 +393,7 @@ export function AnalysisScreen() {
           />
           <div className="timeline-ticks" aria-hidden="true">
             {line.map((_, i) => (
-              <span key={i} className="tick" data-player={playerForStone(i)} data-past={i < cursor} />
+              <span key={i} className="tick" data-player={start.ownerOfMove(i)} data-past={i < cursor} />
             ))}
           </div>
         </div>
@@ -231,10 +401,12 @@ export function AnalysisScreen() {
         <ExportMenu
           up
           moves={line}
+          setUp={setup !== null}
+          position={() => toHexoNotation(game)}
           record={async () => (record && !inVariation
             ? record
             : buildReplay({
-              game: Game.fromMoves(line, radius),
+              game: Game.fromMoves(line, radius, setup),
               mode: 'analysis',
               players: { X: { name: names.X, kind: 'human' }, O: { name: names.O, kind: 'human' } },
               resignedBy: null,
@@ -247,8 +419,10 @@ export function AnalysisScreen() {
             type="button"
             className="button is-quiet"
             onClick={() => {
+              setSetup(record?.setup ?? null);
               setLine(original!);
               setCursor(Math.min(cursor, original!.length));
+              setSuggestion(null);
               setVersion((v) => v + 1);
             }}
           >
@@ -257,11 +431,35 @@ export function AnalysisScreen() {
         )}
       </section>
 
+      {picking && (
+        <div className="suggest-pick plate" role="group" aria-label="Suggest a turn for">
+          <p className="suggest-pick-label caps">Suggest a turn for</p>
+          <div className="suggest-pick-row">
+            {(['X', 'O'] as Player[]).map((p) => (
+              <button key={p} type="button" className={`suggest-side is-${p.toLowerCase()}`} onClick={() => suggest(p)}>
+                <span className="sb-letter" aria-hidden="true">{p}</span>
+                <span className="suggest-side-name">
+                  {names[p]}
+                  {p === game.current && !game.winner && <span className="suggest-side-note">to move</span>}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <Dock
         actions={[
-          ...(record ? [{ icon: GraduationCap, label: 'Review with coach', onClick: () => navigate(`/review/${record.id}`) }] : []),
+          ...(record && !record.setup ? [{ icon: GraduationCap, label: 'Review with coach', onClick: () => navigate(`/review/${record.id}`) }] : []),
+          { icon: PencilLine, label: editOpen ? 'Hide board editing' : 'Edit the board', onClick: () => setEditOpen((o) => !o), pressed: editOpen },
           { icon: ShieldAlert, label: showThreats ? 'Hide threats' : 'Show threats', onClick: () => setShowThreats((s) => !s), pressed: showThreats },
-          { icon: Lightbulb, label: suggesting ? 'Rookie is thinking' : 'Ask Rookie for a suggestion', onClick: suggest, disabled: suggesting || Boolean(game.winner) },
+          {
+            icon: Lightbulb,
+            label: suggesting ? 'Six is thinking' : 'Suggest a turn',
+            onClick: () => setPicking((p) => !p),
+            pressed: picking,
+            disabled: Boolean(suggesting) || Boolean(game.winner),
+          },
           { icon: LocateFixed, label: 'Recenter on the stones', onClick: () => board.current?.recenter() },
           { icon: Minus, label: 'Zoom out', onClick: () => board.current?.zoomBy(0.8) },
           { icon: Plus, label: 'Zoom in', onClick: () => board.current?.zoomBy(1.25) },

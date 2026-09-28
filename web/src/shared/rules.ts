@@ -30,6 +30,21 @@ export function stonesLeftBefore(index: number): number {
   return (index - 1) % 2 === 0 ? 2 : 1;
 }
 
+/** A position play can't necessarily reach (the analysis board's free placement): these stones, then `toMove`
+ * places `stonesLeft` stones and play goes on as usual. */
+export interface Setup {
+  stones: Array<{ q: number; r: number; player: Player }>;
+  toMove: Player;
+  stonesLeft: 1 | 2;
+}
+
+/** The ordinary-game index of the first stone after a set-up (the engine uses the same mapping). */
+export function setupBase(setup: Setup | null | undefined): number {
+  if (!setup) return 0;
+  if (setup.toMove === 'X') return setup.stonesLeft === 1 ? (setup.stones.length === 0 ? 0 : 4) : 3;
+  return setup.stonesLeft === 2 ? 1 : 2;
+}
+
 export interface GameSnapshot {
   radius: number;
   moves: Hex[];
@@ -49,16 +64,35 @@ export class Game {
   // Number of stones within `radius` of each cell.
   private readonly coverage = new Map<string, number>();
   private readonly history: Hex[] = [];
+  private readonly setupStones: Hex[] = [];
+  private readonly base: number;
   private winnerValue: Player | null = null;
   private winLineValue: Hex[] | null = null;
+  readonly setup: Setup | null;
 
-  constructor(radius: number = DEFAULT_RADIUS) {
+  constructor(radius: number = DEFAULT_RADIUS, setup: Setup | null = null) {
     if (!Number.isInteger(radius) || radius < 1) throw new Error(`invalid radius ${radius}`);
     this.radius = radius;
+    this.setup = setup;
+    this.base = setupBase(setup);
+    for (const s of setup?.stones ?? []) {
+      const key = hexKey(s.q, s.r);
+      if (this.cells.has(key)) throw new Error(`two set-up stones on ${s.q},${s.r}`);
+      this.cells.set(key, s.player);
+      this.setupStones.push({ q: s.q, r: s.r });
+      this.cover({ q: s.q, r: s.r }, 1);
+    }
+    for (const s of setup?.stones ?? []) {
+      const line = this.winnerValue ? null : this.lineThrough(s, s.player);
+      if (line) {
+        this.winnerValue = s.player;
+        this.winLineValue = line;
+      }
+    }
   }
 
-  static fromMoves(moves: readonly Hex[], radius: number): Game {
-    const game = new Game(radius);
+  static fromMoves(moves: readonly Hex[], radius: number, setup: Setup | null = null): Game {
+    const game = new Game(radius, setup);
     moves.forEach((m, i) => {
       const res = game.place(m.q, m.r);
       if (!res.ok) throw new Error(`move ${i + 1} at ${m.q},${m.r} is illegal: ${res.error}`);
@@ -66,8 +100,25 @@ export class Game {
     return game;
   }
 
+  /** Stones played (after the set-up, if any). */
   get moves(): readonly Hex[] {
     return this.history;
+  }
+
+  /** Every stone on the board: the set-up's, then the played ones. */
+  get stones(): readonly Hex[] {
+    return this.setupStones.length === 0 ? this.history : [...this.setupStones, ...this.history];
+  }
+
+  /** Who placed played stone `i`. */
+  ownerOfMove(i: number): Player {
+    return playerForStone(this.base + i);
+  }
+
+  /** The next stone is the second of its turn. */
+  get isSecondStone(): boolean {
+    const i = this.base + this.history.length;
+    return this.winnerValue === null && i > 0 && stonesLeftBefore(i) === 1;
   }
 
   get lastMove(): Hex | null {
@@ -76,16 +127,18 @@ export class Game {
 
   // Turn state freezes at the winning stone (no hand-off after a win).
   get current(): Player {
-    return this.winnerValue ?? playerForStone(this.history.length);
+    return this.winnerValue ?? playerForStone(this.base + this.history.length);
   }
 
   get turn(): number {
-    return turnForStone(this.winnerValue ? this.history.length - 1 : this.history.length);
+    if (this.winnerValue && this.history.length === 0) return turnForStone(this.base);
+    return turnForStone(this.base + (this.winnerValue ? this.history.length - 1 : this.history.length));
   }
 
   get stonesLeft(): number {
-    const n = this.history.length;
-    return this.winnerValue ? stonesLeftBefore(n - 1) - 1 : stonesLeftBefore(n);
+    const n = this.base + this.history.length;
+    if (this.winnerValue) return this.history.length === 0 ? 0 : stonesLeftBefore(n - 1) - 1;
+    return stonesLeftBefore(n);
   }
 
   get winner(): Player | null {
@@ -103,14 +156,14 @@ export class Game {
   isPlayable(q: number, r: number): boolean {
     const key = hexKey(q, r);
     if (this.cells.has(key)) return false;
-    if (this.history.length === 0) {
+    if (this.cells.size === 0) {
       return Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)) <= this.radius;
     }
     return this.coverage.has(key);
   }
 
   playableCells(): Hex[] {
-    if (this.history.length === 0) return hexesWithin({ q: 0, r: 0 }, this.radius);
+    if (this.cells.size === 0) return hexesWithin({ q: 0, r: 0 }, this.radius);
     const out: Hex[] = [];
     for (const key of this.coverage.keys()) {
       if (this.cells.has(key)) continue;
@@ -134,10 +187,7 @@ export class Game {
     const cell = { q, r };
     this.cells.set(hexKey(q, r), player);
     this.history.push(cell);
-    for (const h of hexesWithin(cell, this.radius)) {
-      const key = hexKey(h.q, h.r);
-      this.coverage.set(key, (this.coverage.get(key) ?? 0) + 1);
-    }
+    this.cover(cell, 1);
     const line = this.lineThrough(cell, player);
     if (line) {
       this.winnerValue = player;
@@ -151,12 +201,7 @@ export class Game {
     const cell = this.history.pop();
     if (!cell) return null;
     this.cells.delete(hexKey(cell.q, cell.r));
-    for (const h of hexesWithin(cell, this.radius)) {
-      const key = hexKey(h.q, h.r);
-      const n = (this.coverage.get(key) ?? 0) - 1;
-      if (n <= 0) this.coverage.delete(key);
-      else this.coverage.set(key, n);
-    }
+    this.cover(cell, -1);
     // Only the stone that ended the game can carry the win.
     this.winnerValue = null;
     this.winLineValue = null;
@@ -164,7 +209,16 @@ export class Game {
   }
 
   clone(): Game {
-    return Game.fromMoves(this.history, this.radius);
+    return Game.fromMoves(this.history, this.radius, this.setup);
+  }
+
+  private cover(cell: Hex, sign: 1 | -1): void {
+    for (const h of hexesWithin(cell, this.radius)) {
+      const key = hexKey(h.q, h.r);
+      const n = (this.coverage.get(key) ?? 0) + sign;
+      if (n <= 0) this.coverage.delete(key);
+      else this.coverage.set(key, n);
+    }
   }
 
   snapshot(): GameSnapshot {

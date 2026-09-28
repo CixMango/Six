@@ -14,6 +14,8 @@ export interface RoomBot {
   level: number;
   // If set, the bot holds its answer while a blunder call is shown.
   blunders?: boolean;
+  // Six thinks by time instead of positions (the host's setting).
+  byTime?: boolean;
 }
 
 export interface SeatView {
@@ -87,7 +89,10 @@ export function parseClientMessage(raw: string): ClientMessage | null {
       if (!bot || !ROOM_BOTS.includes(id) || !Number.isInteger(bot.level)) return null;
       const level = bot.level as number;
       if (!(level >= 1 && level <= BOT_META[id].levelLabels.length)) return null;
-      return { ...base, bot: bot.blunders === true ? { id, level, blunders: true } : { id, level } };
+      return {
+        ...base,
+        bot: { id, level, ...(bot.blunders === true ? { blunders: true } : {}), ...(bot.byTime === true ? { byTime: true } : {}) },
+      };
     }
     case 'room:join': {
       const code = typeof v.code === 'string' ? v.code.trim().toUpperCase() : '';

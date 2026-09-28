@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { ThinkingMeter } from '../components/ThinkingMeter.tsx';
 import { useLocation, useParams } from 'wouter';
 import {
   Check, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CircleAlert, CircleHelp, FastForward, Flag, LocateFixed,
@@ -415,6 +416,7 @@ export function ReviewScreen({ data, source, onOpenBoard, onLeave, leaveLabel }:
         inset={sheet ? { top: 150, right: 16, bottom: Math.round(window.innerHeight * 0.54), left: 16 } : { top: 110, right: 440, bottom: 170, left: 24 }}
       />
       <ChannelBug tag="Review" />
+      <ThinkingMeter progress={state.progress} />
       <SettingsButton />
       <Scorebug swapColors={data.swapColors} names={names} lastMove={lastMoveInfo(game)} onShowLastStone={() => board.current?.showLastStone()} current={game.current} stonesLeft={game.stonesLeft} turn={game.turn} winner={game.winner} finished={game.winner !== null} chance={chance} />
 
@@ -555,7 +557,12 @@ export function AppReviewScreen() {
   useEffect(() => {
     api
       .replay(id)
-      .then((r) => setData({
+      .then((r) => {
+        // The coach reviews games from the start; set-up positions belong on the analysis board.
+        if (r.setup) navigate(`/analysis/${r.id}`, { replace: true });
+        return r;
+      })
+      .then((r) => !r.setup && setData({
         moves: r.moves.map(([q, rr]) => ({ q, r: rr })),
         radius: r.radius === 8 ? 8 : 9,
         names: { X: r.players.X.name, O: r.players.O.name },

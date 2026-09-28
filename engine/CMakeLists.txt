@@ -128,5 +128,11 @@ else()
   message(STATUS "ONNX Runtime SDK not found at ${SIX_ORT_DIR}: building without the network engine")
 endif()
 
+# The downloaded app's Windows launcher (Six.exe): starts Six with no window.
+if(WIN32)
+  add_executable(sixlauncher WIN32 tools/launcher.cpp tools/launcher.rc)
+  set_target_properties(sixlauncher PROPERTIES OUTPUT_NAME Six)
+endif()
+
 enable_testing()
 add_test(NAME sixtests COMMAND sixtests)

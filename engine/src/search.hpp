@@ -42,7 +42,7 @@ struct SearchParams {
 
 struct SearchLimits {
   int maxDepth = 64;              // in turns
-  std::int64_t maxNodes = -1;     // -1: unlimited
+  std::int64_t maxNodes = -1;     // -1: unlimited; the network search counts new positions over the whole turn
   int moveTimeMs = -1;            // -1: unlimited
 };
 
@@ -52,6 +52,7 @@ struct SearchInfo {
   std::int64_t nodes = 0;
   int timeMs = 0;
   std::vector<Hex> pv;            // stones of the principal variation, turn by turn
+  bool progress = false;          // a report while searching: only nodes and timeMs are set
 };
 
 struct SearchResult {
@@ -59,6 +60,7 @@ struct SearchResult {
   int score = 0;
   int depth = 0;
   std::int64_t nodes = 0;
+  std::int64_t reusedNodes = 0;   // network search: visits kept from the previous turn's tree
   int timeMs = 0;
 };
 

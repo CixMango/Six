@@ -38,6 +38,8 @@ export interface BoardMark {
 export interface FrameInput {
   hover: Hex | null;
   hoverPlayer: Player | null;
+  /** Free placement: preview on any empty cell, not just lit ones. */
+  hoverAnywhere?: boolean;
   focus: Hex | null;
   marks: readonly BoardMark[];
   reducedMotion: boolean;
@@ -157,7 +159,8 @@ export class BoardRenderer {
 
   sync(game: Game, version: number, now: number): void {
     if (version === this.version) return;
-    const moves = game.moves;
+    // Set-up stones (analysis board) first, then the ones played.
+    const moves = game.stones;
     const oneStoneAdded = this.version !== -1 && moves.length === this.moveCount + 1;
     this.version = version;
     this.moveCount = moves.length;
@@ -234,8 +237,9 @@ export class BoardRenderer {
     const last = game.lastMove;
     this.lastMove = last ? { ...hexToPixel(last, 1), player: game.stoneAt(last.q, last.r)! } : null;
     // The other stone of the most recent turn, when that turn had two.
-    const lastIndex = moves.length - 1;
-    const mate = lastIndex >= 2 && (lastIndex - 1) % 2 === 1 ? moves[lastIndex - 1] : undefined;
+    const played = game.moves;
+    const lastIndex = played.length - 1;
+    const mate = lastIndex >= 1 && game.ownerOfMove(lastIndex - 1) === game.ownerOfMove(lastIndex) ? played[lastIndex - 1] : undefined;
     this.turnMate = mate ? hexToPixel(mate, 1) : null;
 
     this.winner = game.winner;
@@ -356,7 +360,9 @@ export class BoardRenderer {
     ctx.strokeStyle = input.alarm ? `rgba(${BOARD_COLORS.alarm.edge}, 0.8)` : `rgba(${BOARD_COLORS.field}, 0.55)`;
     ctx.stroke(this.boundaryPath);
 
-    if (input.hover && input.hoverPlayer && this.playableKeys.has(hexKey(input.hover.q, input.hover.r))) {
+    const hoverKey = input.hover ? hexKey(input.hover.q, input.hover.r) : '';
+    const hoverFits = input.hoverAnywhere ? !this.stoneKeys.has(hoverKey) : this.playableKeys.has(hoverKey);
+    if (input.hover && input.hoverPlayer && hoverFits) {
       const p = hexToPixel(input.hover, 1);
       const path = new Path2D();
       hexPath(path, p.x, p.y, TILE_SIZE);

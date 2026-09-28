@@ -4,6 +4,7 @@
 //   isready                              -> readyok
 //   newgame                              forget earlier positions
 //   position radius <r> [moves q r ...]  set the game from its stone sequence
+//     [setup x|o q r ...] [tomove x|o 1|2]  first put down these stones (a set-up position), then that side places next
 //   setoption <name> <value>             change a search setting (see SearchParams and MctsParams)
 //   options                              -> option <name> <value> lines for the search that plays, then optionsdone
 //   go [depth d] [movetime ms] [nodes n] -> info ... lines, then bestmove q r [q r]
@@ -151,22 +152,63 @@ int main(int argc, char** argv) {
 #endif
     } else if (command == "position") {
       finishSearch();
-      std::string word;
+      std::vector<std::string> words;
+      for (std::string w; in >> w;) words.push_back(w);
       int radius = 8;
       std::vector<six::Hex> moves;
-      while (in >> word) {
-        if (word == "radius") {
-          in >> radius;
-        } else if (word == "moves") {
-          int q = 0;
-          int r = 0;
-          while (in >> q >> r) moves.push_back({q, r});
+      std::vector<std::pair<six::Hex, six::Player>> setup;
+      bool isSetup = false;
+      six::Player toMove = six::Player::X;
+      int toMoveLeft = 2;
+      bool readable = true;
+      const auto owner = [](const std::string& w) {
+        return w == "x" || w == "X" ? six::Player::X : w == "o" || w == "O" ? six::Player::O : six::Player::None;
+      };
+      for (std::size_t i = 0; i < words.size() && readable;) {
+        const std::string& word = words[i++];
+        try {
+          if (word == "radius" && i < words.size()) {
+            radius = std::stoi(words[i++]);
+          } else if (word == "setup") {
+            isSetup = true;
+            while (i + 2 < words.size() && owner(words[i]) != six::Player::None) {
+              setup.push_back({{std::stoi(words[i + 1]), std::stoi(words[i + 2])}, owner(words[i])});
+              i += 3;
+            }
+          } else if (word == "tomove" && i + 1 < words.size()) {
+            isSetup = true;
+            toMove = owner(words[i]);
+            toMoveLeft = std::stoi(words[i + 1]);
+            i += 2;
+          } else if (word == "moves") {
+            while (i + 1 < words.size()) {
+              moves.push_back({std::stoi(words[i]), std::stoi(words[i + 1])});
+              i += 2;
+            }
+          }
+        } catch (const std::exception&) {
+          readable = false;
         }
       }
       gameMoves = moves;
       boardMatches = false;
+      if (!readable) {
+        send("error unreadable position");
+        continue;
+      }
+      if (isSetup) {
+        // A set-up position has its own history: nothing from earlier searches carries over.
+        searcher.newGame();
+#ifdef SIX_WITH_NET
+        if (mcts) mcts->newGame();
+#endif
+      }
       try {
         six::Board next(radius);
+        if (isSetup && !next.setup(setup, toMove, toMoveLeft)) {
+          send("error unusable setup");
+          continue;
+        }
         bool legal = true;
         for (std::size_t i = 0; i < moves.size() && legal; ++i) {
           if (next.place(moves[i]) != six::PlaceError::None) {
@@ -217,11 +259,16 @@ int main(int argc, char** argv) {
 #else
       const std::nullptr_t net = nullptr;
 #endif
-      const std::vector<six::Hex> movesSent = gameMoves;
+      const std::vector<six::Hex> movesSent = boardMatches ? position.moves() : gameMoves;
+      const int stonesLeft = boardMatches ? position.stonesLeft() : stonesLeftAt(gameMoves.size());
       const bool searchable = boardMatches;
-      worker = std::thread([&searcher, net, position, limits, movesSent, searchable]() {
+      worker = std::thread([&searcher, net, position, limits, movesSent, stonesLeft, searchable]() {
         bool reported = false;
         const auto report = [&reported](const six::SearchInfo& info) {
+          if (info.progress) {
+            send("info nodes " + std::to_string(info.nodes) + " time " + std::to_string(info.timeMs));
+            return;
+          }
           std::ostringstream os;
           os << "info depth " << info.depth << " score " << info.score << " nodes " << info.nodes << " time " << info.timeMs
              << " pv";
@@ -244,7 +291,7 @@ int main(int argc, char** argv) {
           if (net) net->newGame();
 #endif
           result = six::SearchResult{};
-          result.stones = emergencyTurn(movesSent, stonesLeftAt(movesSent.size()));
+          result.stones = emergencyTurn(movesSent, stonesLeft);
           reported = true;
         }
         if (!reported && !result.stones.empty()) {

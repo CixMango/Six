@@ -1,3 +1,4 @@
+import { currentThinkBy } from '../lib/thinkBy.ts';
 import { SettingsButton } from '../components/Settings.tsx';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useLocation, useParams, useSearch } from 'wouter';
@@ -112,7 +113,9 @@ export function RoomScreen() {
       const side = params.get('side');
       // Friend vs bot: `side` is the friend's and the bot takes the other one.
       const botId = params.get('bot') as RoomBotId | null;
-      const bot = botId && ROOM_BOTS.includes(botId) ? { id: botId, level: parseLevel(params.get('level')), blunders: blunderModeOn() } : undefined;
+      const bot = botId && ROOM_BOTS.includes(botId)
+        ? { id: botId, level: parseLevel(params.get('level')), blunders: blunderModeOn(), byTime: currentThinkBy() === 'time' }
+        : undefined;
       s.send({ type: 'room:create', radius: parseRadius(params.get('radius')), side: side === 'X' || side === 'O' ? side : 'random', bot });
     } else {
       s.send({ type: 'room:join', code: routeCode });

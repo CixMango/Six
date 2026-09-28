@@ -141,16 +141,16 @@ TEST_CASE("mcts: continues the previous turn's tree when the game follows it") {
   // The opponent's search starts from the kept subtree, so it already has visits before searching any more.
   const auto reply = mcts.search(next, none);
   CHECK_EQ(turnProblem(next, reply), std::string{});
-  CHECK(reply.nodes > 1);
+  CHECK(reply.reusedNodes > 1);
   // A position the tree never reached starts over.
   Board other = play({{0, 0}, {2, 2}, {2, 3}});
   const auto fresh = mcts.search(other, none);
   CHECK_EQ(turnProblem(other, fresh), std::string{});
-  CHECK(fresh.nodes <= 1);
+  CHECK_EQ(fresh.reusedNodes, 0);
   // And a new game forgets the tree.
   mcts.search(b, deep);
   mcts.newGame();
-  CHECK(mcts.search(next, none).nodes <= 1);
+  CHECK_EQ(mcts.search(next, none).reusedNodes, 0);
 }
 
 TEST_CASE("mcts: a whole game played with one kept tree stays legal") {
@@ -229,4 +229,31 @@ TEST_CASE("mcts: self-play stone search returns a legal stone and a proper polic
   Board copy = win;
   copy.place(decided.move);
   CHECK(copy.threatCount(Player::X) > 0 || copy.winner() == Player::X);
+}
+
+TEST_CASE("mcts: a position budget counts new positions over the whole turn, with progress on the way") {
+  // O to place two, in a quiet position: both stones get searched.
+  const Board b = play({{0, 0}, {2, 1}, {-2, 3}, {1, 1}, {0, 2}});
+  six::Mcts mcts(tinyNet());
+  mcts.params().batch = 8;
+  six::SearchLimits limits;
+  limits.maxNodes = 3000;
+  std::vector<std::int64_t> seen;
+  six::SearchInfo last;
+  const auto result = mcts.search(b, limits, [&](const six::SearchInfo& info) {
+    if (info.progress) seen.push_back(info.nodes);
+    else last = info;
+  });
+  CHECK_EQ(turnProblem(b, result), std::string());
+  // Batches can overshoot by a few.
+  CHECK(result.nodes >= 3000 && result.nodes < 3000 + 64);
+  CHECK_EQ(last.nodes, result.nodes);
+  for (std::size_t i = 1; i < seen.size(); ++i) CHECK(seen[i] >= seen[i - 1]);
+  // A kept tree's earlier visits don't count against the next turn's budget.
+  Board next = b;
+  for (const Hex& h : result.stones) next.place(h);
+  const Hex reply = next.stonesLeft() == 2 ? Hex{-1, 1} : Hex{};
+  next.place(reply);
+  const auto again = mcts.search(next, limits);
+  CHECK(again.nodes >= 3000 && again.nodes < 3000 + 64);
 }

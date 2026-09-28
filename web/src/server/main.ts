@@ -6,7 +6,10 @@ import { pathToFileURL } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { parseClientMessage, type ServerMessage } from '../shared/protocol.ts';
 import { validateReplay } from '../shared/replay.ts';
-import { availableBots, botTurn, downloadableGenerations, evaluatePosition, generationOf, REVIEW_MS, reviewDefense, reviewPosition, listGenerations, newestNetwork, parseBotTurnRequest, precheckTurn, provenWinner } from './bots.ts';
+import { availableBots, botTurn, downloadableGenerations, evaluatePosition, generationOf, REVIEW_MS, reviewDefense, reviewPosition, listGenerations, newestNetwork, parseBotTurnRequest, precheckTurn, provenWinner, suggestTurn } from './bots.ts';
+import { parseSetup } from '../shared/setup.ts';
+import { readProgress } from './thinking.ts';
+import { checkForUpdate, createDesktopShortcut, exitForUpdate, LAUNCHED, quit, quitWhenIdle, touch, updateView, VERSION } from './appLife.ts';
 import { localAddresses } from './network.ts';
 import { ReplayStore } from './replayStore.ts';
 import { importGame, importHexo } from './hexo.ts';
@@ -42,7 +45,8 @@ async function soundVolumes(): Promise<Volumes> {
 }
 const rooms = new RoomManager({
   saveReplay: (record) => replays.save(record),
-  botTurn: (moves, radius, bot, level) => botTurn({ moves: moves.map((m) => [m.q, m.r]), radius, bot, level }),
+  botTurn: (moves, radius, bot, level, byTime) =>
+    botTurn({ moves: moves.map((m) => [m.q, m.r]), radius, bot, level, think: byTime ? 'time' : 'positions' }),
   precheck: (moves, radius) => precheckTurn(moves.map((m) => [m.q, m.r]), radius).then(() => undefined),
   // Only waits for the fast verdict, never the network judge.
   judge: async (moves, radius) => {
@@ -79,10 +83,13 @@ async function readJson(req: IncomingMessage): Promise<unknown> {
   return JSON.parse(Buffer.concat(chunks).toString('utf8'));
 }
 
-function info() {
+function info(req: IncomingMessage) {
   const { hamachi, lan } = localAddresses();
   return {
     name: 'Six',
+    version: VERSION,
+    // The downloaded app, run without a window: the host can quit it from the page.
+    canQuit: LAUNCHED && isLocalAddress(req.socket.remoteAddress),
     port: PORT,
     hamachiUrl: hamachi ? `http://${hamachi}:${PORT}` : null,
     lanUrls: lan.map((ip) => `http://${ip}:${PORT}`),
@@ -93,7 +100,20 @@ async function api(req: IncomingMessage, res: ServerResponse, url: URL): Promise
   const route = `${req.method} ${url.pathname}`;
   try {
     for (const local of localRoutes) if (await local(route, res)) return;
-    if (route === 'GET /api/info') return sendJson(res, 200, info());
+    if (route === 'GET /api/info') return sendJson(res, 200, info(req));
+    if (route === 'GET /api/alive') return sendJson(res, 200, {});
+    if (route === 'GET /api/update') return sendJson(res, 200, updateView());
+    if (route === 'POST /api/shortcut') {
+      if (!LAUNCHED || !isLocalAddress(req.socket.remoteAddress)) return sendJson(res, 403, { error: 'Only the PC running Six can do that.' });
+      await createDesktopShortcut();
+      return sendJson(res, 200, {});
+    }
+    if (route === 'POST /api/update' || route === 'POST /api/quit') {
+      if (!LAUNCHED || !isLocalAddress(req.socket.remoteAddress)) return sendJson(res, 403, { error: 'Only the PC running Six can do that.' });
+      if (route === 'POST /api/update' && !updateView().latest) return sendJson(res, 400, { error: 'No update is available.' });
+      sendJson(res, 200, {});
+      return route === 'POST /api/update' ? exitForUpdate() : quit();
+    }
     if (route === 'GET /api/bots') return sendJson(res, 200, availableBots());
     if (route === 'GET /api/generations') {
       const local = listGenerations();
@@ -114,11 +134,11 @@ async function api(req: IncomingMessage, res: ServerResponse, url: URL): Promise
       return sendJson(res, 200, { proven: await provenWinner(request.moves, request.radius) });
     }
     if (route === 'POST /api/review/position') {
-      const body = (await readJson(req)) as { moves?: unknown; radius?: unknown; movetime?: unknown };
-      const request = parseBotTurnRequest({ moves: body.moves, radius: body.radius, bot: 'rookie', level: 1 });
+      const body = (await readJson(req)) as { moves?: unknown; radius?: unknown; movetime?: unknown; thinkId?: unknown };
+      const request = parseBotTurnRequest({ moves: body.moves, radius: body.radius, bot: 'rookie', level: 1, thinkId: body.thinkId });
       const movetime = Number(body.movetime ?? 1000);
       if (!Number.isInteger(movetime) || movetime < REVIEW_MS.min || movetime > REVIEW_MS.max) throw new Error('bad movetime');
-      return sendJson(res, 200, await reviewPosition(request.moves, request.radius, movetime));
+      return sendJson(res, 200, await reviewPosition(request.moves, request.radius, movetime, request.thinkId));
     }
     if (route === 'POST /api/review/defense') {
       const body = (await readJson(req)) as { moves?: unknown; played?: unknown; radius?: unknown };
@@ -128,9 +148,20 @@ async function api(req: IncomingMessage, res: ServerResponse, url: URL): Promise
     }
     if (route === 'POST /api/eval') {
       // Same validation as a bot turn request, minus the bot.
-      const body = (await readJson(req)) as { keep?: unknown };
+      const body = (await readJson(req)) as { keep?: unknown; setup?: unknown };
       const request = parseBotTurnRequest({ ...body, bot: 'rookie', level: 1 });
-      return sendJson(res, 200, await evaluatePosition(request.moves, request.radius, body.keep === true));
+      return sendJson(res, 200, await evaluatePosition(request.moves, request.radius, body.keep === true, parseSetup(body.setup)));
+    }
+    if (route === 'POST /api/suggest') {
+      const body = (await readJson(req)) as { setup?: unknown };
+      const request = parseBotTurnRequest({ ...body, bot: 'rookie', level: 1 });
+      const cells = await suggestTurn(request.moves, request.radius, parseSetup(body.setup), request.think, request.thinkId);
+      return sendJson(res, 200, { cells });
+    }
+    const thinking = /^\/api\/thinking\/([a-z0-9-]+)$/.exec(url.pathname);
+    if (req.method === 'GET' && thinking) {
+      const progress = readProgress(thinking[1]!);
+      return progress ? sendJson(res, 200, progress) : sendJson(res, 404, { error: 'No such search.' });
     }
     if (route === 'GET /api/sound') {
       // The host sets both; each browser uses its own (host here, friend elsewhere).
@@ -163,7 +194,7 @@ async function api(req: IncomingMessage, res: ServerResponse, url: URL): Promise
     if (route === 'POST /api/import/game') {
       const body = (await readJson(req)) as { text?: unknown };
       if (typeof body.text !== 'string') throw new Error('text must be a string');
-      return sendJson(res, 200, { id: await importGame(body.text, replays) });
+      return sendJson(res, 200, await importGame(body.text, replays));
     }
     if (route === 'POST /api/import/hexo') {
       const body = (await readJson(req)) as { link?: unknown };
@@ -227,6 +258,7 @@ const vite = PROD
     });
 
 server.on('request', (req, res) => {
+  touch();
   const url = new URL(req.url ?? '/', 'http://localhost');
   if (url.pathname.startsWith('/api/')) {
     void api(req, res, url);
@@ -238,6 +270,8 @@ server.on('request', (req, res) => {
 });
 
 const wss = new WebSocketServer({ noServer: true, maxPayload: 16_000 });
+quitWhenIdle(() => wss.clients.size);
+void checkForUpdate();
 server.on('upgrade', (req, socket, head) => {
   if (new URL(req.url ?? '/', 'http://localhost').pathname !== '/ws') return;
   wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
@@ -279,7 +313,8 @@ setInterval(() => {
 }, 30_000).unref();
 
 server.listen(PORT, '0.0.0.0', () => {
-  const { hamachiUrl } = info();
+  const { hamachi } = localAddresses();
+  const hamachiUrl = hamachi ? `http://${hamachi}:${PORT}` : null;
   console.log(`\n  Six is running${PROD ? '' : ' (dev mode)'}`);
   console.log(`  On this PC:     http://localhost:${PORT}`);
   console.log(hamachiUrl ? `  Friends (Hamachi): ${hamachiUrl}` : '  Hamachi: not detected');

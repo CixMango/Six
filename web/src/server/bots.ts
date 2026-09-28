@@ -2,11 +2,13 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Hex } from '../shared/hex.ts';
-import { Game, otherPlayer, SAVED_RADII, type Player } from '../shared/rules.ts';
+import { Game, otherPlayer, SAVED_RADII, type Player, type Setup } from '../shared/rules.ts';
 import { chooseTurn } from '../shared/bots/rookie.ts';
 import { BOT_META, HEXBOT_MOVETIME_MS } from '../shared/botMeta.ts';
 import { evaluationFromScore, idleTurn, turnStart, type Evaluation } from '../shared/winChance.ts';
 import { EngineProcess } from './engineProcess.ts';
+import { finishProgress, trackProgress, validThinkId } from './thinking.ts';
+import { thinkingLimits, type ThinkBy } from '../shared/thinking.ts';
 import { markBotGame } from './training.ts';
 
 export interface BotInfo {
@@ -118,10 +120,18 @@ export interface BotTurnRequest {
   level: number;
   // Six only: play this older generation instead of the newest.
   generation?: number;
+  // Six only: think by positions (the level's budget) or by time; time when unsaid.
+  think?: ThinkBy;
+  // Names the search so the page can poll its progress.
+  thinkId?: string;
 }
 
 export function parseBotTurnRequest(body: unknown): BotTurnRequest {
   const v = (body ?? {}) as Record<string, unknown>;
+  return { ...parseBotTurnBase(v), think: v.think === 'positions' ? 'positions' : 'time', thinkId: validThinkId(v.thinkId) };
+}
+
+function parseBotTurnBase(v: Record<string, unknown>): BotTurnRequest {
   if (!Array.isArray(v.moves) || v.moves.length > 5000) throw new Error('moves must be a list');
   const moves = v.moves.map((m) => {
     if (!Array.isArray(m) || m.length !== 2 || !m.every(Number.isInteger)) throw new Error('each move is [q, r]');
@@ -227,7 +237,8 @@ export async function generationNetwork(
 
 // Set once a network engine dies while starting on the graphics card (a driver fault it can't recover from itself).
 // From then on the network runs on the CPU.
-let netOnCpu = false;
+// SIX_NET_CPU=1 keeps the network off the graphics card (a second server beside a game or training).
+let netOnCpu = process.env.SIX_NET_CPU === '1';
 
 function netArgs(net: string): string[] {
   if (netOnCpu) return ['--net', net, '--cpu'];
@@ -278,19 +289,30 @@ const EVAL_SETUP = ['setoption rootThreatNodes 3000000'];
 let evalEngine: { key: string; process: EngineProcess } | null = null;
 
 // Judged by Six on the newest network if there is one, else by Six Classic.
-export async function evaluatePosition(moves: Array<[number, number]>, radius: number, keep = false): Promise<Evaluation & { engine: 'six' | 'classic' }> {
+export async function evaluatePosition(
+  moves: Array<[number, number]>,
+  radius: number,
+  keep = false,
+  setup: Setup | null = null,
+): Promise<Evaluation & { engine: 'six' | 'classic' }> {
   // Both players and a watching host ask about the same positions.
-  const key = `${radius}|${newestNetwork() ?? ''}|${moves.join(' ')}`;
+  const key = `${radius}|${newestNetwork() ?? ''}|${setup ? JSON.stringify(setup) : ''}|${moves.join(' ')}`;
   const known = evalCache.get(key);
   if (known) return known;
   const running = evalRunning.get(key);
   if (running) return running;
-  const run = judgeInTurn(key, moves, radius, keep).finally(() => evalRunning.delete(key));
+  const run = judgeInTurn(key, moves, radius, keep, setup).finally(() => evalRunning.delete(key));
   evalRunning.set(key, run);
   return run;
 }
 
-async function judgeInTurn(key: string, moves: Array<[number, number]>, radius: number, keep: boolean): Promise<Evaluation & { engine: 'six' | 'classic' }> {
+async function judgeInTurn(
+  key: string,
+  moves: Array<[number, number]>,
+  radius: number,
+  keep: boolean,
+  setup: Setup | null,
+): Promise<Evaluation & { engine: 'six' | 'classic' }> {
   // Runs one at a time. A newer request drops this one (stepping through a replay would otherwise queue stale
   // positions), unless `keep` is set: live games need every turn end judged to catch blunders.
   const ticket = ++evalTicket;
@@ -300,7 +322,7 @@ async function judgeInTurn(key: string, moves: Array<[number, number]>, radius: 
   try {
     await previous;
     if (!keep && ticket !== evalTicket) throw new Error('A newer position was asked for.');
-    const result = await judge(moves, radius);
+    const result = await judge(moves, radius, setup);
     evalCache.set(key, result);
     if (evalCache.size > 500) evalCache.delete(evalCache.keys().next().value!);
     return result;
@@ -314,15 +336,40 @@ const evalRunning = new Map<string, Promise<Evaluation & { engine: 'six' | 'clas
 let evalTicket = 0;
 let evalChain: Promise<void> = Promise.resolve();
 
-async function judge(moves: Array<[number, number]>, radius: number): Promise<Evaluation & { engine: 'six' | 'classic' }> {
+async function judge(moves: Array<[number, number]>, radius: number, setup: Setup | null = null): Promise<Evaluation & { engine: 'six' | 'classic' }> {
   const hexes = moves.map(([q, r]) => ({ q, r }));
-  const game = Game.fromMoves(hexes, radius);
+  const game = Game.fromMoves(hexes, radius, setup);
   if (game.winner) return { winX: game.winner === 'X' ? 1 : 0, proven: game.winner, engine: newestNetwork() ? 'six' : 'classic' };
   const { net } = judgeEngine();
-  const { score } = await onNetwork(() => judgeEngine().process, (e) => e.search(hexes, radius, EVAL_MOVETIME_MS));
+  const { score } = await onNetwork(() => judgeEngine().process, (e) => e.search(hexes, radius, EVAL_MOVETIME_MS, setup));
   if (score === null) throw new Error('The engine gave no evaluation.');
   const engine = net ? 'six' : 'classic';
   return { ...evaluationFromScore(score, game.current, engine), engine };
+}
+
+/** How long Six thinks about an analysis board suggestion. */
+export const SUGGEST_MOVETIME_MS = 3000;
+
+/** Thinking by positions, a suggestion gets level 3's budget (about 2.5 s on the reference PC). */
+const SUGGEST_LEVEL = 3;
+
+/** The newest Six's turn for whoever is to move (the analysis board's "Suggest a turn"). */
+export async function suggestTurn(
+  moves: Array<[number, number]>,
+  radius: number,
+  setup: Setup | null,
+  think: ThinkBy = 'time',
+  thinkId?: string,
+): Promise<Hex[]> {
+  const hexes = moves.map(([q, r]) => ({ q, r }));
+  const game = Game.fromMoves(hexes, radius, setup);
+  if (game.winner) throw new Error('The game is already over.');
+  const nodes = think === 'positions' ? thinkingLimits('hexnet', SUGGEST_LEVEL, 'positions').nodes : null;
+  const extra = { nodes, onProgress: trackProgress(thinkId, nodes) };
+  const { cells } = await onNetwork(() => judgeEngine().process, (e) => e.search(hexes, radius, SUGGEST_MOVETIME_MS, setup, extra)).finally(
+    () => finishProgress(thinkId),
+  );
+  return cells;
 }
 
 function judgeEngine(): { process: EngineProcess; net: string | null } {
@@ -353,7 +400,7 @@ export const REVIEW_MS = { min: 200, max: 10_000 } as const;
 const reviewCache = new Map<string, ReviewFacts>();
 
 // Win chance and best turn from Six, plus a proven forced win (from the search, else the exact verdict).
-export async function reviewPosition(moves: Array<[number, number]>, radius: number, movetimeMs: number): Promise<ReviewFacts> {
+export async function reviewPosition(moves: Array<[number, number]>, radius: number, movetimeMs: number, thinkId?: string): Promise<ReviewFacts> {
   const hexes = moves.map(([q, r]) => ({ q, r }));
   const game = Game.fromMoves(hexes, radius);
   if (game.winner) return { winX: game.winner === 'X' ? 1 : 0, proven: game.winner, best: [] };
@@ -361,7 +408,10 @@ export async function reviewPosition(moves: Array<[number, number]>, radius: num
   const known = reviewCache.get(key);
   if (known) return known;
   const { net } = judgeEngine();
-  const { cells, score } = await onNetwork(() => judgeEngine().process, (e) => e.search(hexes, radius, movetimeMs));
+  const extra = { onProgress: trackProgress(thinkId, null) };
+  const { cells, score } = await onNetwork(() => judgeEngine().process, (e) => e.search(hexes, radius, movetimeMs, null, extra)).finally(
+    () => finishProgress(thinkId),
+  );
   if (score === null) throw new Error('The engine gave no evaluation.');
   const evaluation = evaluationFromScore(score, game.current, net ? 'six' : 'classic');
   const proven = evaluation.proven ?? (await provenWinner(moves, radius));
@@ -463,12 +513,14 @@ export async function botTurn(req: BotTurnRequest): Promise<Hex[]> {
   if (req.bot === 'hexweb') throw new Error('Six (browser) plays in the browser, not on the server.');
   if (req.bot === 'hexbot' || req.bot === 'hexnet') {
     const chosen = req.bot === 'hexnet' && req.generation !== undefined ? await generationNetwork(req.generation) : undefined;
-    const movetime = HEXBOT_MOVETIME_MS[req.level - 1]!;
+    const { movetimeMs, nodes } = thinkingLimits(req.bot, req.level, req.think ?? 'time');
+    const extra = { nodes, onProgress: trackProgress(req.thinkId, nodes) };
     // Training pauses while someone plays HexBot and resumes a few minutes after.
     markBotGame(RUNS_RL);
-    const cells = req.bot === 'hexnet'
-      ? await onNetwork(() => networkEngine(chosen), (e) => e.bestTurn(hexes, req.radius, movetime))
-      : await (engine ??= new EngineProcess(ENGINE_EXE)).bestTurn(hexes, req.radius, movetime);
+    const cells = await (req.bot === 'hexnet'
+      ? onNetwork(() => networkEngine(chosen), (e) => e.bestTurn(hexes, req.radius, movetimeMs, extra))
+      : (engine ??= new EngineProcess(ENGINE_EXE)).bestTurn(hexes, req.radius, movetimeMs, extra)
+    ).finally(() => finishProgress(req.thinkId));
     markBotGame(RUNS_RL);
     // Check the engine's moves against our own rules.
     const probe = game.clone();

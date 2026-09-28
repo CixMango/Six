@@ -155,3 +155,77 @@ TEST_CASE("stones can't spread wider than the window: farther cells are out of r
   b.undo();
   CHECK_EQ(b.hash(), hash);
 }
+
+TEST_CASE("setup: any stones, with the side to move and stones left chosen") {
+  Board b(8);
+  // Twelve X and three O can't come from play, but a set-up position allows it.
+  std::vector<std::pair<Hex, Player>> stones;
+  for (int q = 0; q < 12; ++q) stones.push_back({{q, 3 * (q % 2)}, Player::X});
+  for (int q = 0; q < 3; ++q) stones.push_back({{q, 10}, Player::O});
+  CHECK(b.setup(stones, Player::O, 1));
+  CHECK_EQ(b.stones(), 15);
+  CHECK_EQ(b.setupStones(), 15);
+  CHECK_EQ(b.at({4, 0}), Player::X);
+  CHECK_EQ(b.at({1, 10}), Player::O);
+  CHECK_EQ(b.current(), Player::O);
+  CHECK_EQ(b.stonesLeft(), 1);
+  CHECK(b.secondStone());
+  // Play goes on from there: O's last stone, then two for X.
+  CHECK_EQ(b.place({5, 10}), PlaceError::None);
+  CHECK_EQ(b.ownerOf(15), Player::O);
+  CHECK_EQ(b.current(), Player::X);
+  CHECK_EQ(b.stonesLeft(), 2);
+  CHECK(!b.secondStone());
+  b.undo();
+  CHECK_EQ(b.current(), Player::O);
+  // Setup stones can't be undone.
+  b.undo();
+  CHECK_EQ(b.stones(), 15);
+}
+
+TEST_CASE("setup: each side to move and stone count") {
+  const std::vector<std::pair<Hex, Player>> stones{{{0, 0}, Player::X}, {{1, 0}, Player::O}};
+  for (Player p : {Player::X, Player::O}) {
+    for (int left : {1, 2}) {
+      Board b(8);
+      CHECK(b.setup(stones, p, left));
+      CHECK_EQ(b.current(), p);
+      CHECK_EQ(b.stonesLeft(), left);
+      CHECK_EQ(b.secondStone(), left == 1);
+    }
+  }
+  // No stones and X with one: the ordinary opening.
+  Board empty(8);
+  CHECK(empty.setup({}, Player::X, 1));
+  CHECK_EQ(empty.current(), Player::X);
+  CHECK(!empty.secondStone());
+  CHECK(empty.isPlayable({8, 0}));
+}
+
+TEST_CASE("setup: a six already on the board ends the game, overlapping stones are refused") {
+  std::vector<std::pair<Hex, Player>> six;
+  for (int q = 0; q < 6; ++q) six.push_back({{q, 0}, Player::O});
+  Board b(8);
+  CHECK(b.setup(six, Player::X, 2));
+  CHECK_EQ(b.winner(), Player::O);
+  CHECK_EQ(b.place({0, 1}), PlaceError::GameOver);
+  Board c(8);
+  CHECK(!c.setup({{{0, 0}, Player::X}, {{0, 0}, Player::O}}, Player::X, 2));
+}
+
+TEST_CASE("setup: the hash tells positions apart by side to move") {
+  Board a(8);
+  Board b(8);
+  const std::vector<std::pair<Hex, Player>> stones{{{0, 0}, Player::X}, {{2, 0}, Player::O}};
+  a.setup(stones, Player::X, 2);
+  b.setup(stones, Player::O, 2);
+  CHECK(a.hash() != b.hash());
+}
+
+TEST_CASE("setup: stones far outside the window's first placement still fit") {
+  Board b(8);
+  CHECK(b.setup({{{500, -300}, Player::X}, {{510, -300}, Player::O}}, Player::X, 2));
+  CHECK_EQ(b.at({510, -300}), Player::O);
+  CHECK(b.isPlayable({505, -300}));
+  CHECK(!b.isPlayable({0, 0}));
+}

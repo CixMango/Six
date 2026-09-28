@@ -26,6 +26,11 @@ EM_ASYNC_JS(void, jsEvaluate, (const float* planes, int batch, float* out), {
   await Module.evaluateBatch(planes, batch, out);
 });
 
+// How far a turn's search is (new positions, milliseconds), a few times a second.
+EM_JS(void, jsProgress, (double nodes, int ms), {
+  if (Module.onProgress) Module.onProgress(nodes, ms);
+});
+
 class JsEvaluator : public six::NetworkEvaluator {
  public:
   void evaluate(const float* planes, int batch, six::NetOutput* out) override {
@@ -61,7 +66,9 @@ EMSCRIPTEN_KEEPALIVE const char* six_turn(const char* moves, int radius, int mov
     six::SearchLimits limits;
     if (movetimeMs > 0) limits.moveTimeMs = movetimeMs;
     if (nodes > 0) limits.maxNodes = nodes;
-    const six::SearchResult result = mcts->search(board, limits);
+    const six::SearchResult result = mcts->search(board, limits, [](const six::SearchInfo& info) {
+      if (info.progress) jsProgress(static_cast<double>(info.nodes), info.timeMs);
+    });
     std::ostringstream out;
     for (std::size_t i = 0; i < result.stones.size(); ++i) out << (i ? " " : "") << result.stones[i].q << ' ' << result.stones[i].r;
     reply = out.str();
