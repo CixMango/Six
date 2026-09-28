@@ -1586,3 +1586,45 @@
   white-space: pre-line;
   line-height: 1.15;
 }
+
+/* ---------- Feedback: left of the Settings gear ---------- */
+.feedback-button {
+  position: absolute;
+  z-index: 4;
+  top: var(--space-4);
+  right: calc(max(var(--space-4), env(safe-area-inset-right)) + 34px + var(--space-2));
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--plate);
+  color: var(--text-2);
+  box-shadow: var(--shadow-plate);
+  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+
+.feedback-button:hover {
+  color: var(--text);
+  background: var(--plate-2);
+}
+
+.feedback-button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.feedback-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.feedback-text {
+  min-height: 120px;
+  padding: var(--space-2) var(--space-3);
+  resize: vertical;
+  font: inherit;
+  line-height: 1.45;
+}

@@ -2,6 +2,10 @@
 
 What changed in each release of the Six app. Downloads are on the [Releases](https://github.com/CixMango/Six/releases) page.
 
+## 1.3.3
+
+- **Feedback button** at the top right (left of Settings): send bugs, ideas or anything else straight to the developer, with an optional way to reach you.
+
 ## 1.3.2
 
 - **Analysis board:** the Board panel no longer cuts off its right edge (the Erase button, stone count and Load button).

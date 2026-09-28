@@ -1,5 +1,5 @@
 // node scripts/build-play.mjs && npx.cmd wrangler deploy --config deploy/wrangler.jsonc
-// Static site plus worker.js for /api/hexo/*.
+// Static site plus worker.js for /api/hexo/* and /api/feedback (secret: npx.cmd wrangler secret put FEEDBACK_WEBHOOK).
 {
   "name": "playsix",
   "compatibility_date": "2026-09-21",

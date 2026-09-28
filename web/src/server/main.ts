@@ -17,6 +17,8 @@ import { RoomManager } from './rooms.ts';
 import { TrainingStatus, isLocalAddress } from './training.ts';
 
 const PORT = Number(process.env.SIX_PORT ?? 6600);
+// The website's feedback relay (web/deploy/worker.js), which forwards to the owner's Discord.
+const FEEDBACK_RELAY = process.env.SIX_FEEDBACK_URL ?? 'https://playsix.cixmango.workers.dev/api/feedback';
 const PROD = process.argv.includes('--prod');
 const WEB_ROOT = path.resolve(import.meta.dirname, '../..');
 const DIST = path.join(WEB_ROOT, 'dist/client');
@@ -102,6 +104,20 @@ async function api(req: IncomingMessage, res: ServerResponse, url: URL): Promise
     for (const local of localRoutes) if (await local(route, res)) return;
     if (route === 'GET /api/info') return sendJson(res, 200, info(req));
     if (route === 'GET /api/alive') return sendJson(res, 200, {});
+    if (route === 'POST /api/feedback') {
+      // Relayed through the website, which holds the Discord webhook; the app never has it.
+      const body = (await readJson(req)) as { message?: unknown; contact?: unknown; page?: unknown };
+      const relay = await fetch(FEEDBACK_RELAY, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ message: body.message, contact: body.contact, page: body.page, source: 'app', version: VERSION }),
+        signal: AbortSignal.timeout(15_000),
+      }).catch(() => null);
+      if (!relay) return sendJson(res, 502, { error: "Couldn't reach the feedback service. Check your internet connection." });
+      if (relay.status === 204) return sendJson(res, 200, {});
+      const answer = (await relay.json().catch(() => ({}))) as { error?: string };
+      return sendJson(res, relay.status, { error: answer.error ?? "Couldn't send it right now." });
+    }
     if (route === 'GET /api/update') return sendJson(res, 200, updateView());
     if (route === 'POST /api/shortcut') {
       if (!WINDOWLESS || !isLocalAddress(req.socket.remoteAddress)) return sendJson(res, 403, { error: 'Only the PC running Six can do that.' });

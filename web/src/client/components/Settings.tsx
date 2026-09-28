@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Settings as Gear, X } from 'lucide-react';
 import { Segmented, SoundCheck } from './Broadcast.tsx';
 import { api } from '../lib/api.ts';
+import { FeedbackButton } from './Feedback.tsx';
 import { useGeneration } from '../lib/generation.ts';
 import { GenerationSlider } from './GenerationSlider.tsx';
 import { useAutoCamera } from '../lib/autoCamera.ts';
@@ -42,6 +43,7 @@ export function SettingsButton() {
 
   return (
     <>
+      <FeedbackButton />
       <button type="button" className="settings-gear plate" aria-label="Settings" aria-haspopup="dialog" onClick={() => setOpen(true)}>
         <Gear size={17} aria-hidden="true" />
       </button>
