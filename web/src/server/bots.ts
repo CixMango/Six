@@ -274,11 +274,15 @@ function networkEngine(chosen?: string): EngineProcess {
       netEngines.delete(oldest);
     }
     const env = { ...process.env, PATH: [CUDA_DLLS, TENSORRT_DLLS, process.env.PATH ?? ''].join(path.delimiter) };
-    entry = new EngineProcess(ENGINE_EXE, netArgs(net), env, [], NET_IDLE_CLOSE_MS);
+    entry = new EngineProcess(ENGINE_EXE, netArgs(net), env, NET_SETUP, NET_IDLE_CLOSE_MS);
   }
   netEngines.set(net, entry);
   return entry;
 }
+
+// A tree big enough for the 45 s level (about 1.15 GB at its fullest, only during long searches). The engine's default
+// (6M nodes) fills at about 12 s on a fast PC; the website keeps that and stops at level 5.
+const NET_SETUP = ['setoption maxTreeNodes 24000000'];
 
 // Long enough for the threat solver to prove wins several turns deep.
 export const EVAL_MOVETIME_MS = 1600;
@@ -382,7 +386,7 @@ function judgeEngine(): { process: EngineProcess; net: string | null } {
     evalEngine = {
       key: args.join(' '),
       process: net
-        ? new EngineProcess(ENGINE_EXE, args, env, EVAL_SETUP, NET_IDLE_CLOSE_MS)
+        ? new EngineProcess(ENGINE_EXE, args, env, [...EVAL_SETUP, ...NET_SETUP], NET_IDLE_CLOSE_MS)
         : new EngineProcess(ENGINE_EXE, [], undefined, EVAL_SETUP),
     };
   }

@@ -75,12 +75,22 @@ jobs:
             -d '{"moves":[[0,0],[1,0],[2,-1]],"radius":8,"bot":"hexnet","level":1}' | grep -q cells
 
       - name: Bare distributions (no graphics drivers, older libraries)
+        # All four at once (each container has its own network, so they don't clash), then each one's output.
         run: |
-          for image in ubuntu:22.04 debian:12 fedora:41 archlinux:latest; do
-            echo "::group::$image"
-            docker run --rm -v /tmp/Six:/six:ro -v "$PWD/.github/linux-check.sh:/check.sh:ro" "$image" sh /check.sh
-            echo "::endgroup::"
+          images="ubuntu:22.04 debian:12 fedora:41 archlinux:latest"
+          for image in $images; do
+            (docker run --rm -v /tmp/Six:/six:ro -v "$PWD/.github/linux-check.sh:/check.sh:ro" "$image" sh /check.sh \
+              > "/tmp/check-${image%%:*}.txt" 2>&1; echo $? > "/tmp/check-${image%%:*}.code") &
           done
+          wait
+          failed=0
+          for image in $images; do
+            echo "::group::$image"
+            cat "/tmp/check-${image%%:*}.txt"
+            echo "::endgroup::"
+            [ "$(cat "/tmp/check-${image%%:*}.code")" = 0 ] || { echo "::error::$image failed"; failed=1; }
+          done
+          exit $failed
 
       - name: Installer (.deb)
         run: |

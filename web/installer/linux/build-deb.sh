@@ -67,5 +67,6 @@ Description: Hex tic-tac-toe with a self-trained bot
 CONTROL
 
 mkdir -p "$out"
-dpkg-deb --build --root-owner-group "$root" "$out/Six-$version-Setup-linux.deb"
+# gzip rather than the default xz: about ten times faster to build, the file only slightly bigger.
+dpkg-deb --build --root-owner-group -Zgzip -z6 "$root" "$out/Six-$version-Setup-linux.deb"
 echo "wrote $out/Six-$version-Setup-linux.deb"

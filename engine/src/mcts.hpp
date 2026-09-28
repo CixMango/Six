@@ -29,6 +29,7 @@ struct MctsParams {
   int secondStoneShare = 25;            // percent of the turn spent re-searching after the first stone
   bool rootThreatWide = false;          // root threat search tries every free second stone (slower, finds more)
   std::int64_t cacheEntries = 1 << 15;  // expansion cache, rounded down to a power of two (0: off)
+  std::int64_t maxTreeNodes = 6'000'000;  // search tree limit, about 48 bytes each; a search stops when it's full
   bool reuseTree = true;
 
   bool set(const std::string& name, std::int64_t value);

@@ -23,7 +23,8 @@ constexpr std::uint8_t kPending = 1;
 constexpr std::uint8_t kExpanded = 2;
 constexpr std::uint8_t kTerminal = 3;
 constexpr std::uint8_t kDead = 4;  // the board refused the stone (only at the window edge)
-constexpr std::size_t kMaxNodes = 6'000'000;
+// Past this many nodes a growing tree jumps straight to its limit (MctsParams::maxTreeNodes).
+constexpr std::size_t kUsualNodes = 4'000'000;
 constexpr int kLeafThreatTurns = 2;
 constexpr int kCacheChildren = 64;
 
@@ -137,6 +138,7 @@ bool MctsParams::set(const std::string& name, std::int64_t value) {
   else if (name == "secondStoneShare") secondStoneShare = static_cast<int>(std::clamp<std::int64_t>(value, 0, 90));
   else if (name == "cacheEntries") cacheEntries = std::clamp<std::int64_t>(value, 0, std::int64_t{1} << 24);
   else if (name == "reuseTree") reuseTree = value != 0;
+  else if (name == "maxTreeNodes") maxTreeNodes = std::clamp<std::int64_t>(value, 100'000, 200'000'000);
   else if (name == "rootThreatWide") rootThreatWide = value != 0;
   else return false;
   return true;
@@ -154,6 +156,7 @@ std::vector<std::pair<std::string, std::int64_t>> MctsParams::list() const {
           {"secondStoneShare", secondStoneShare},
           {"cacheEntries", cacheEntries},
           {"reuseTree", reuseTree ? 1 : 0},
+          {"maxTreeNodes", maxTreeNodes},
           {"rootThreatWide", rootThreatWide ? 1 : 0}};
 }
 
@@ -402,7 +405,13 @@ struct Mcts::Impl {
       if (stop && stop->load()) return;
       if (Clock::now() >= until) return;
       if (visitCap >= 0 && nodes[static_cast<std::size_t>(root)].visits >= visitCap) return;
-      if (nodes.size() > kMaxNodes) return;
+      const std::size_t limit = static_cast<std::size_t>(params.maxTreeNodes);
+      if (nodes.size() > limit) return;
+      // A search outgrowing the usual size gets the whole limit in one step, so the tree isn't copied again and again
+      // (each growth briefly holds the old and the new copy).
+      if (nodes.size() + (1 << 16) > nodes.capacity() && nodes.capacity() >= kUsualNodes && nodes.capacity() < limit) {
+        nodes.reserve(limit + (1 << 16));
+      }
       for (int i = 0; i < params.batch; ++i) {
         if (!gather(root)) break;
         if (visitCap >= 0 && nodes[static_cast<std::size_t>(root)].visits + static_cast<std::int64_t>(leaves.size()) >= visitCap) break;
@@ -675,7 +684,7 @@ SearchResult Mcts::search(const Board& position, const SearchLimits& limits, con
   // Reuse the previous turn's tree when this position is in it.
   std::int32_t root = s.reusableRoot(position);
   if (root > 0) s.compact(root);
-  if (root >= 0 && s.nodes.size() <= kMaxNodes / 2) {
+  if (root >= 0 && s.nodes.size() <= static_cast<std::size_t>(s.params.maxTreeNodes) / 2) {
     root = 0;
   } else {
     s.nodes.clear();

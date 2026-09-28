@@ -257,3 +257,16 @@ TEST_CASE("mcts: a position budget counts new positions over the whole turn, wit
   const auto again = mcts.search(next, limits);
   CHECK(again.nodes >= 3000 && again.nodes < 3000 + 64);
 }
+
+TEST_CASE("mcts: the tree limit is a setting, and a full tree ends the search early") {
+  six::Mcts mcts(tinyNet());
+  mcts.params().batch = 8;
+  CHECK(mcts.params().set("maxTreeNodes", 100000));
+  CHECK_EQ(mcts.params().maxTreeNodes, 100000);
+  const Board b = play({{0, 0}, {2, 1}, {-2, 3}, {1, 1}, {0, 2}});
+  six::SearchLimits limits;
+  limits.moveTimeMs = 20000;
+  const auto result = mcts.search(b, limits);
+  CHECK_EQ(turnProblem(b, result), std::string());
+  CHECK(result.timeMs < 15000);
+}

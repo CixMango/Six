@@ -6,8 +6,8 @@ import { HEXBOT_MOVETIME_MS, type BotId } from './botMeta.ts';
 export type ThinkBy = 'positions' | 'time';
 
 /** New positions per turn (both stones) at levels 1 to 7, measured by engine/tools/measure_levels.py (medians over
- * 20 positions from saved games, gen 455). Levels 6 and 7 stop where the search tree fills its 6M-node limit. */
-export const SIX_LEVEL_POSITIONS = [5_900, 12_600, 30_200, 65_800, 133_000, 160_000, 160_000] as const;
+ * positions from saved games, gen 455; levels 6 and 7 with the app's 24M-node tree). The website stops at level 5. */
+export const SIX_LEVEL_POSITIONS = [5_900, 12_600, 30_200, 65_800, 133_000, 254_700, 539_400] as const;
 
 /** Six (the app's or the browser's) can think by positions; the other bots always think by time. */
 export function thinksByPositions(bot: BotId, thinkBy: ThinkBy): boolean {

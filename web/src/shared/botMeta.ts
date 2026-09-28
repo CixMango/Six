@@ -3,7 +3,8 @@ export const BOT_META = {
   hexbot: { name: 'Six Classic', levelLabels: ['0.5 s', '1 s', '2.5 s', '5 s', '10 s', '20 s', '45 s'] },
   hexnet: { name: 'Six', levelLabels: ['0.5 s', '1 s', '2.5 s', '5 s', '10 s', '20 s', '45 s'] },
   // Runs in the browser (WebAssembly engine + ONNX Runtime Web).
-  hexweb: { name: 'Six (browser)', levelLabels: ['0.5 s', '1 s', '2.5 s', '5 s', '10 s', '20 s', '45 s'] },
+  // Levels 6 and 7 need a search tree too big for a browser tab.
+  hexweb: { name: 'Six (browser)', levelLabels: ['0.5 s', '1 s', '2.5 s', '5 s', '10 s'] },
 } as const;
 
 export type BotId = keyof typeof BOT_META;

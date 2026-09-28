@@ -3,7 +3,7 @@
 Plays each level's time on real positions (turn starts from saved games, early to late) with a fresh tree each time,
 the way a player's slower PC would search them, and writes the median per level.
 
-  py -3.12 engine/tools/measure_levels.py [--engine engine/build/exp/sixengine.exe] [--net runs/rl/gen-0455/net.onnx]
+  py -3.12 engine/tools/measure_levels.py [--engine engine/build/release/sixengine.exe] [--net runs/rl/gen-0455/net.onnx]
       > runs/levels/levels.json
 """
 import argparse
@@ -46,9 +46,12 @@ def positions(limit):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--engine", default=str(ROOT / "engine/build/exp/sixengine.exe"))
+    # The optimised build: a debug build (build/exp can be one) searches about three times slower.
+    ap.add_argument("--engine", default=str(ROOT / "engine/build/release/sixengine.exe"))
     ap.add_argument("--net", default=str(ROOT / "runs/rl/gen-0455/net.onnx"))
     ap.add_argument("--positions", type=int, default=24)
+    ap.add_argument("--levels", default="1,2,3,4,5,6,7", help="which levels to measure, e.g. 6,7")
+    ap.add_argument("--tree", type=int, default=0, help="the engine's tree limit (setoption maxTreeNodes), 0: its default")
     args = ap.parse_args()
     lib = ROOT / ".venv/Lib/site-packages"
     env = dict(os.environ, PATH=os.pathsep.join([str(lib / "torch/lib"), str(lib / "tensorrt_libs"), os.environ["PATH"]]))
@@ -72,11 +75,16 @@ def main():
                 return nodes
         raise RuntimeError("the engine stopped")
 
+    if args.tree:
+        ask([f"setoption maxTreeNodes {args.tree}"])
+    wanted = {int(x) for x in args.levels.split(",")}
     chosen = positions(args.positions)
     print(f"{len(chosen)} positions; engine {'TensorRT' if trt else 'CUDA'}", file=sys.stderr, flush=True)
     search(chosen[0], 2000)  # warm-up: loading and building the GPU engine
     levels = []
     for level, ms in enumerate(TIMES_MS, 1):
+        if level not in wanted:
+            continue
         counts = []
         for pos in chosen:
             n = search(pos, ms)
@@ -86,7 +94,7 @@ def main():
                        "max": max(counts), "samples": len(counts)})
         print(json.dumps(levels[-1]), file=sys.stderr, flush=True)
     ask(["quit"])
-    print(json.dumps({"net": Path(args.net).parent.name, "positions": len(chosen), "levels": levels}, indent=2))
+    print(json.dumps({"net": Path(args.net).parent.name, "tree": args.tree or None, "positions": len(chosen), "levels": levels}, indent=2))
 
 
 if __name__ == "__main__":
