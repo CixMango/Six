@@ -51,8 +51,9 @@ export function FeedbackButton() {
 
   return (
     <>
-      <button type="button" className="feedback-button plate" aria-label="Send feedback" aria-haspopup="dialog" title="Send feedback" onClick={() => setOpen(true)}>
+      <button type="button" className="feedback-button plate" aria-haspopup="dialog" onClick={() => setOpen(true)}>
         <MessageSquare size={16} aria-hidden="true" />
+        <span>Feedback</span>
       </button>
       <dialog
         ref={dialog}

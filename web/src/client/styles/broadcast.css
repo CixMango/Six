@@ -1593,16 +1593,19 @@
   z-index: 4;
   top: var(--space-4);
   right: calc(max(var(--space-4), env(safe-area-inset-right)) + 34px + var(--space-2));
-  display: grid;
-  place-items: center;
-  width: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   height: 34px;
-  padding: 0;
+  padding: 0 var(--space-3);
   border: 0;
   border-radius: var(--radius);
   background: var(--plate);
   color: var(--text-2);
   box-shadow: var(--shadow-plate);
+  font-size: var(--step--1);
+  font-weight: 600;
+  white-space: nowrap;
   transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
 }
 
@@ -1627,4 +1630,22 @@
   resize: vertical;
   font: inherit;
   line-height: 1.45;
+}
+
+/* Phones: icon only, so it doesn't crowd the channel bug (the label stays for screen readers). */
+@media (max-width: 720px) {
+  .feedback-button {
+    padding: 0;
+    width: 34px;
+    justify-content: center;
+  }
+
+  .feedback-button span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
