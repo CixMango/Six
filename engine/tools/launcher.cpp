@@ -1,5 +1,6 @@
-// Six.exe, the downloaded app's Windows launcher: runs node\node.exe web\launch.mjs with no window and exits.
-// launch.mjs opens Six in the browser (starting it first if it isn't running).
+// Six.exe: starts Six with no window and exits. In the download it runs node\node.exe web\launch.mjs; in a checkout
+// of the repo (no bundled Node) it runs the installed Node on web\scripts\launch-source.mjs. Either one opens Six in
+// the browser, starting it first if it isn't running.
 #include <windows.h>
 
 #include <string>
@@ -9,8 +10,18 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
   const DWORD length = GetModuleFileNameW(nullptr, self, MAX_PATH);
   std::wstring dir(self, length);
   dir = dir.substr(0, dir.find_last_of(L"\\/"));
-  const std::wstring node = dir + L"\\node\\node.exe";
-  if (GetFileAttributesW(node.c_str()) == INVALID_FILE_ATTRIBUTES) {
+  std::wstring node = dir + L"\\node\\node.exe";
+  std::wstring script = dir + L"\\web\\launch.mjs";
+  const auto exists = [](const std::wstring& path) { return GetFileAttributesW(path.c_str()) != INVALID_FILE_ATTRIBUTES; };
+  if (!exists(node) && exists(dir + L"\\web\\scripts\\launch-source.mjs")) {
+    // A checkout of the repo: the installed Node runs the app from source.
+    wchar_t found[MAX_PATH];
+    if (SearchPathW(nullptr, L"node.exe", nullptr, MAX_PATH, found, nullptr) > 0) {
+      node = found;
+      script = dir + L"\\web\\scripts\\launch-source.mjs";
+    }
+  }
+  if (!exists(node)) {
     // Opened from inside the zip: Windows unpacks only this file, so nothing else is next to it.
     MessageBoxW(nullptr,
                 L"Six can't find its files. This usually means it was opened from inside the zip.\n\n"
@@ -18,7 +29,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
                 L"Six", MB_OK | MB_ICONWARNING);
     return 1;
   }
-  std::wstring command = L"\"" + node + L"\" \"" + dir + L"\\web\\launch.mjs\"";
+  std::wstring command = L"\"" + node + L"\" \"" + script + L"\"";
   STARTUPINFOW startup{};
   startup.cb = sizeof(startup);
   PROCESS_INFORMATION process{};

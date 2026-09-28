@@ -9,7 +9,7 @@ import { validateReplay } from '../shared/replay.ts';
 import { availableBots, botTurn, downloadableGenerations, evaluatePosition, generationOf, REVIEW_MS, reviewDefense, reviewPosition, listGenerations, newestNetwork, parseBotTurnRequest, precheckTurn, provenWinner, suggestTurn } from './bots.ts';
 import { parseSetup } from '../shared/setup.ts';
 import { readProgress } from './thinking.ts';
-import { checkForUpdate, createDesktopShortcut, exitForUpdate, LAUNCHED, quit, quitWhenIdle, touch, updateView, VERSION } from './appLife.ts';
+import { checkForUpdate, createDesktopShortcut, exitForUpdate, LAUNCHED, quit, quitWhenIdle, touch, updateView, VERSION, WINDOWLESS } from './appLife.ts';
 import { localAddresses } from './network.ts';
 import { ReplayStore } from './replayStore.ts';
 import { importGame, importHexo } from './hexo.ts';
@@ -89,7 +89,7 @@ function info(req: IncomingMessage) {
     name: 'Six',
     version: VERSION,
     // The downloaded app, run without a window: the host can quit it from the page.
-    canQuit: LAUNCHED && isLocalAddress(req.socket.remoteAddress),
+    canQuit: WINDOWLESS && isLocalAddress(req.socket.remoteAddress),
     port: PORT,
     hamachiUrl: hamachi ? `http://${hamachi}:${PORT}` : null,
     lanUrls: lan.map((ip) => `http://${ip}:${PORT}`),
@@ -104,12 +104,13 @@ async function api(req: IncomingMessage, res: ServerResponse, url: URL): Promise
     if (route === 'GET /api/alive') return sendJson(res, 200, {});
     if (route === 'GET /api/update') return sendJson(res, 200, updateView());
     if (route === 'POST /api/shortcut') {
-      if (!LAUNCHED || !isLocalAddress(req.socket.remoteAddress)) return sendJson(res, 403, { error: 'Only the PC running Six can do that.' });
+      if (!WINDOWLESS || !isLocalAddress(req.socket.remoteAddress)) return sendJson(res, 403, { error: 'Only the PC running Six can do that.' });
       await createDesktopShortcut();
       return sendJson(res, 200, {});
     }
     if (route === 'POST /api/update' || route === 'POST /api/quit') {
-      if (!LAUNCHED || !isLocalAddress(req.socket.remoteAddress)) return sendJson(res, 403, { error: 'Only the PC running Six can do that.' });
+      const allowed = route === 'POST /api/update' ? LAUNCHED : WINDOWLESS;
+      if (!allowed || !isLocalAddress(req.socket.remoteAddress)) return sendJson(res, 403, { error: 'Only the PC running Six can do that.' });
       if (route === 'POST /api/update' && !updateView().latest) return sendJson(res, 400, { error: 'No update is available.' });
       sendJson(res, 200, {});
       return route === 'POST /api/update' ? exitForUpdate() : quit();

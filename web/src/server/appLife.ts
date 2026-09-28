@@ -5,6 +5,8 @@ import path from 'node:path';
 import { isNewer, pickRelease, RELEASES_URL, UPDATE_EXIT } from '../launcher/update.ts';
 
 export const LAUNCHED = process.env.SIX_LAUNCHER === '1';
+/** No window to close: the downloaded app, or a copy from source started by Six.exe (SIX_WINDOWLESS; no updates). */
+export const WINDOWLESS = LAUNCHED || process.env.SIX_WINDOWLESS === '1';
 export const VERSION: string =
   process.env.SIX_VERSION ??
   (() => {
@@ -55,7 +57,7 @@ export function touch(): void {
 
 /** `openSockets` counts live connections (rooms, friends); pages also check in every minute while open. */
 export function quitWhenIdle(openSockets: () => number): void {
-  if (!LAUNCHED) return;
+  if (!WINDOWLESS) return;
   setInterval(() => {
     if (openSockets() > 0) touch();
     else if (Date.now() - lastSeen > IDLE_QUIT_MS) process.exit(0);

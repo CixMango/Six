@@ -60,3 +60,4 @@ captures/
 
 # Windows download built by web/scripts/package-release.mjs
 web/release/
+/Six.exe
