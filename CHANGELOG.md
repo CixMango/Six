@@ -2,6 +2,10 @@
 
 What changed in each release of the Six app. Downloads are on the [Releases](https://github.com/CixMango/Six/releases) page.
 
+## 1.3.2
+
+- **Analysis board:** the Board panel no longer cuts off its right edge (the Erase button, stone count and Load button).
+
 ## 1.3.1
 
 - **Loading screen:** opening Six shows a loading page in your browser straight away, which switches to Six as soon as it's ready (no more wondering whether anything happened).

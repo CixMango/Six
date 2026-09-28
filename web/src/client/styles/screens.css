@@ -1834,9 +1834,24 @@
   left: var(--edge);
   display: grid;
   gap: var(--space-4);
-  width: 264px;
+  width: 296px;
   padding: var(--space-4);
   animation: wipe-in var(--dur-slow) var(--ease-out) both;
+}
+
+/* Grid rows may shrink below their content's natural width, so nothing spills past the panel. */
+.edit-panel > *,
+.edit-panel-row > *,
+.edit-panel-analyze > * {
+  min-width: 0;
+}
+
+.edit-panel .seg-option {
+  padding: 0 var(--space-1);
+}
+
+.edit-panel-paste-row .button {
+  flex: none;
 }
 
 .edit-panel-header {

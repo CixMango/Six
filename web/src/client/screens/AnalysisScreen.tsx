@@ -340,7 +340,7 @@ export function AnalysisScreen() {
         marks={marks}
         alarm={Boolean(chance?.proven) && !game.winner}
         label="Analysis board"
-        inset={narrow ? { top: 150, right: 16, bottom: 300, left: 16 } : { top: 110, right: 24, bottom: 170, left: editOpen ? 300 : 24 }}
+        inset={narrow ? { top: 150, right: 16, bottom: 300, left: 16 } : { top: 110, right: 24, bottom: 170, left: editOpen ? 332 : 24 }}
       />
       <ChannelBug
         tag={record ? 'Replay' : 'Analysis'}
