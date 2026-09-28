@@ -23,7 +23,8 @@ cat > "$root/usr/bin/six" <<'SCRIPT'
 set -e
 shipped=/opt/six
 home="${XDG_DATA_HOME:-$HOME/.local/share}/six"
-version() { sed -n 's/.*"version":"\([^"]*\)".*/\1/p' "$1/web/version.json" 2>/dev/null; }
+# Empty when there's no copy yet (the first start).
+version() { sed -n 's/.*"version":"\([^"]*\)".*/\1/p' "$1/web/version.json" 2>/dev/null || true; }
 have="$(version "$home")"
 new="$(version "$shipped")"
 if [ -z "$have" ] || { [ "$have" != "$new" ] && [ "$(printf '%s\n%s\n' "$have" "$new" | sort -V | tail -n 1)" = "$new" ]; }; then
