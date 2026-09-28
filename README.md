@@ -18,6 +18,8 @@ From [Releases](https://github.com/CixMango/Six/releases), the installer for you
 
 Six opens in your browser, with no window of its own; quit it from Settings (it also stops by itself a few minutes after its last tab closes). Each time it starts it checks for a new version and offers to update, keeping your saved games.
 
+What's new in each version: [CHANGELOG.md](CHANGELOG.md).
+
 Or the portable downloads, which run from any folder: `Six-<version>-windows-x64.zip` (double-click `Six`), `Six-<version>-macos-arm64.zip` (right-click `Start Six.command`, **Open**), `Six-<version>-linux-x64.tar.gz` (run `./start-six.sh`).
 
 ## Strategy guide

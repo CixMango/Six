@@ -190,7 +190,7 @@ function LabelKey() {
           <div><dt className="coach-key-term">Key moment</dt><dd>An inaccuracy or anything worse: the turns Practise and the key-moment buttons go to.</dd></div>
           <div><dt className="coach-key-term">Ringed stones</dt><dd>What was played that turn.</dd></div>
           <div><dt className="coach-key-term">Outlined cells</dt><dd>What Six would have played instead.</dd></div>
-          <div><dt className="coach-key-term">Faint stones</dt><dd>How play goes on after the turn with Six's best for both sides (Show the follow-up).</dd></div>
+          <div><dt className="coach-key-term">Faint stones</dt><dd>How play goes on after the turn with Six's best for both sides (Show the follow-up). The number on each is the turn it's played on: 1 is the next turn, then 2, 3 and so on.</dd></div>
           <div><dt className="coach-key-term">What happened</dt><dd>Board facts under the coach's word: lines one turn from six that were made, blocked or left open.</dd></div>
         </dl>
       </div>
@@ -303,7 +303,7 @@ export function ReviewScreen({ data, source, onOpenBoard, onLeave, leaveLabel }:
     const played = turn.stones.map((cell) => ({ cell, player: turn.mover, kind: 'played' as const }));
     const better = showBetter && turn.better ? turn.better.map((cell) => ({ cell, player: turn.mover, kind: 'better' as const })) : [];
     const line = follow
-      ? follow.line.slice(0, followShown).flatMap((cells, k) => cells.map((cell) => ({ cell, player: k % 2 === 0 ? otherPlayer(turn.mover) : turn.mover, kind: 'ghost' as const })))
+      ? follow.line.slice(0, followShown).flatMap((cells, k) => cells.map((cell) => ({ cell, player: k % 2 === 0 ? otherPlayer(turn.mover) : turn.mover, kind: 'ghost' as const, label: String(k + 1) })))
       : [];
     return [...threats, ...line, ...played, ...better];
   }, [showBetter, follow, followShown, showThreats, turn, game]);

@@ -77,7 +77,8 @@ export function UpdatePrompt() {
         {stage === 'ask' && (
           <p className="settings-note">
             You have version {update.current}. Updating takes about a minute; your saved games and settings are kept. Six restarts
-            by itself and this page reloads when it's done.
+            by itself and this page reloads when it's done.{' '}
+            <a href="https://github.com/CixMango/Six/blob/main/CHANGELOG.md" target="_blank" rel="noopener">What's new</a>
           </p>
         )}
         {stage === 'updating' && <p className="settings-note" role="status">Downloading and installing. This page reloads by itself when Six is back.</p>}

@@ -1,20 +1,19 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useThinkBy } from '../lib/thinkBy.ts';
-import { levelLabel, referenceTime, thinksByPositions } from '../../shared/thinking.ts';
+import { levelLabel, thinksByPositions } from '../../shared/thinking.ts';
 import { TrainingHomeRow } from '../lib/localScreens.ts';
 import { useLocation } from 'wouter';
 import { ChevronDown } from 'lucide-react';
 import { Game } from '../../shared/rules.ts';
-import { ROOM_BOTS, ROOM_CODE_PATTERN, type SideChoice } from '../../shared/protocol.ts';
+import type { SideChoice } from '../../shared/protocol.ts';
 import { BoardCanvas, type BoardHandle } from '../board/BoardCanvas.tsx';
 import { ChannelBug, Scorebug, Segmented } from '../components/Broadcast.tsx';
 import { GameImport } from '../components/GameImport.tsx';
 import { SettingsButton } from '../components/Settings.tsx';
-import { GenerationSlider } from '../components/GenerationSlider.tsx';
-import { api, type ServerInfo } from '../lib/api.ts';
+import { useGeneration } from '../lib/generation.ts';
+import { api } from '../lib/api.ts';
 import { BOT_META, isBotId, isTimedBot, type BotId } from '../../shared/botMeta.ts';
 import { lastMoveInfo } from '../lib/gameView.ts';
-import { playerName, savePlayerName } from '../lib/identity.ts';
 import { wait } from '../lib/motion.ts';
 import { useNarrow } from '../lib/useNarrow.ts';
 import { useGameStore } from '../lib/useGameStore.ts';
@@ -115,34 +114,20 @@ export function HomeScreen() {
   const narrow = useNarrow();
   const board = useRef<BoardHandle>(null);
   const [open, setOpen] = useState<RowId | null>('bot');
-  const [info, setInfo] = useState<ServerInfo | null>(null);
   const [replayCount, setReplayCount] = useState<number | null>(null);
 
   const [botSide, setBotSide] = useState<SideChoice>('X');
   const [botId, setBotId] = useState<BotId>('rookie');
   const [botLevel, setBotLevel] = useState(3);
-  const [botGen, setBotGen] = useState<number | null>(null);
-  const [gens, setGens] = useState<{ generations: number[]; downloadable?: number[]; newest: number | null }>({ generations: [], newest: null });
-
-  const [name, setName] = useState(playerName);
-  const [roomSide, setRoomSide] = useState<SideChoice>('random');
-  const [joinCode, setJoinCode] = useState('');
-  const [joinError, setJoinError] = useState('');
+  const [generation] = useGeneration();
 
   const [watchXBot, setWatchXBot] = useState<BotId>('rookie');
   const [watchOBot, setWatchOBot] = useState<BotId>('rookie');
   const [watchX, setWatchX] = useState(5);
   const [watchO, setWatchO] = useState(3);
-  const [watchXGen, setWatchXGen] = useState<number | null>(null);
-  const [watchOGen, setWatchOGen] = useState<number | null>(null);
-  const [friendBot, setFriendBot] = useState<BotId>('rookie');
-  const [friendBotLevel, setFriendBotLevel] = useState(3);
-  const [friendBotSide, setFriendBotSide] = useState<SideChoice>('X');
 
   useEffect(() => {
-    api.info().then(setInfo).catch(() => setInfo(null));
     api.replays().then((list) => setReplayCount(list.length)).catch(() => setReplayCount(null));
-    api.generations().then(setGens).catch(() => undefined);
     api
       .bots()
       .then((list) => {
@@ -152,7 +137,6 @@ export function HomeScreen() {
         setBotId(best);
         setWatchXBot(best);
         setWatchOBot(best);
-        setFriendBot(best);
       })
       .catch(() => setBots(['rookie']));
   }, []);
@@ -167,31 +151,6 @@ export function HomeScreen() {
 
   const fit = (id: BotId, level: number) => Math.min(level, BOT_META[id].levelLabels.length);
   const toggle = (id: RowId) => setOpen((current) => (current === id ? null : id));
-  // Room bots run on this PC, so the in-browser build is left out.
-  const roomBotOptions = botOptions.filter((o) => (ROOM_BOTS as readonly string[]).includes(o.value));
-  const createBotRoom = (e: FormEvent) => {
-    e.preventDefault();
-    savePlayerName(name);
-    navigate(`/room/new?side=${friendBotSide}&bot=${friendBot}&level=${friendBotLevel}`);
-  };
-
-  const createRoom = (e: FormEvent) => {
-    e.preventDefault();
-    savePlayerName(name);
-    navigate(`/room/new?side=${roomSide}`);
-  };
-
-  const joinRoom = (e: FormEvent) => {
-    e.preventDefault();
-    const code = joinCode.trim().toUpperCase();
-    if (!ROOM_CODE_PATTERN.test(code)) {
-      setJoinError('Room codes are four letters, like KDRW.');
-      return;
-    }
-    savePlayerName(name);
-    navigate(`/room/${code}`);
-  };
-
   const { game, version } = exhibition;
 
   return (
@@ -243,95 +202,32 @@ export function HomeScreen() {
               className="rundown-form"
               onSubmit={(e) => {
                 e.preventDefault();
-                const gen = botId === 'hexnet' && botGen !== null ? `&gen=${botGen}` : '';
+                const gen = botId === 'hexnet' && generation !== null ? `&gen=${generation}` : '';
                 navigate(`/bot?bot=${botId}&side=${botSide}&level=${botLevel}${gen}`);
               }}
             >
               <Segmented label="Opponent" value={botId} options={botOptions} onChange={(id) => { setBotId(id); setBotLevel((l) => fit(id, l)); }} />
               <Segmented label="Your side" value={botSide} options={SIDE_OPTIONS} onChange={setBotSide} />
-              {botId === 'hexnet' && <GenerationSlider label="Six's generation" generations={gens.generations} downloadable={gens.downloadable} newest={gens.newest} value={botGen} onChange={setBotGen} />}
               <Segmented label={levelName(botId)} value={botLevel} options={levelOptions(botId)} onChange={setBotLevel} />
-              {thinksByPositions(botId, think) && <p className="notice">As strong as {referenceTime(botLevel)} of thinking on a fast PC, on any computer. Change this in Settings.</p>}
               <button type="submit" className="button is-primary">Start match</button>
             </form>
           </RundownRow>
 
-          <RundownRow id="friend" tag="Hamachi" title="Play a friend" summary="Share a link, nothing to install" open={open === 'friend'} onToggle={toggle}>
-            <form className="rundown-form" onSubmit={createRoom}>
-              <div>
-                <label className="field-label" htmlFor="player-name">Your name</label>
-                <input id="player-name" className="text-input" value={name} maxLength={24} autoComplete="nickname" placeholder="Shown on the scoreboard" onChange={(e) => setName(e.target.value)} />
-              </div>
-              <Segmented label="Your side" value={roomSide} options={SIDE_OPTIONS} onChange={setRoomSide} />
-              <button type="submit" className="button is-primary">Create room</button>
-            </form>
-            <form className="join-form" onSubmit={joinRoom}>
-              <label className="field-label" htmlFor="join-code">Have a room code?</label>
-              <div className="join-row">
-                <input
-                  id="join-code"
-                  className="text-input caps"
-                  value={joinCode}
-                  maxLength={4}
-                  placeholder="KDRW"
-                  aria-describedby={joinError ? 'join-error' : undefined}
-                  onChange={(e) => {
-                    setJoinCode(e.target.value);
-                    setJoinError('');
-                  }}
-                />
-                <button type="submit" className="button">Join</button>
-              </div>
-              {joinError && <p id="join-error" className="error-text">{joinError}</p>}
-            </form>
-            <p className="notice hamachi-note">
-              {info?.hamachiUrl ? (
-                <>Friends on your Hamachi network connect through <strong>{info.hamachiUrl}</strong>.</>
-              ) : info ? (
-                <>Hamachi isn't connected on this PC. Friends on the same network can use {info.lanUrls[0] ?? 'this PC’s address'}.</>
-              ) : (
-                <>Checking your network…</>
-              )}
-            </p>
-          </RundownRow>
-
-          <RundownRow
-            id="friendbot"
-            tag="Hamachi"
-            title="Friend vs bot"
-            summary="Your friend joins, the bot plays them, you watch"
-            open={open === 'friendbot'}
-            onToggle={toggle}
-          >
-            <form className="rundown-form" onSubmit={createBotRoom}>
-              <div>
-                <label className="field-label" htmlFor="host-name">Your name</label>
-                <input id="host-name" className="text-input" value={name} maxLength={24} autoComplete="nickname" placeholder="Shown to your friend" onChange={(e) => setName(e.target.value)} />
-              </div>
-              <Segmented label="Their opponent" value={friendBot} options={roomBotOptions} onChange={(id) => { setFriendBot(id); setFriendBotLevel((l) => fit(id, l)); }} />
-              <Segmented label={levelName(friendBot)} value={friendBotLevel} options={levelOptions(friendBot)} onChange={setFriendBotLevel} />
-              <Segmented label="Your friend's side" value={friendBotSide} options={SIDE_OPTIONS} onChange={setFriendBotSide} />
-              <button type="submit" className="button is-primary">Create room</button>
-              <p className="notice">You get a link to send. When your friend opens it, they play the bot and you watch the game live.</p>
-            </form>
-          </RundownRow>
 
 
-          <RundownRow id="watch" tag="Bot match" title="Watch bots play" summary="Pick the lineup, then sit back" open={open === 'watch'} onToggle={toggle}>
+          <RundownRow id="watch" tag="Bot match" title="Bot vs Bot" summary="Pick the lineup, then sit back" open={open === 'watch'} onToggle={toggle}>
             <form
               className="rundown-form"
               onSubmit={(e) => {
                 e.preventDefault();
-                const xg = watchXBot === 'hexnet' && watchXGen !== null ? `&xg=${watchXGen}` : '';
-                const og = watchOBot === 'hexnet' && watchOGen !== null ? `&og=${watchOGen}` : '';
+                const xg = watchXBot === 'hexnet' && generation !== null ? `&xg=${generation}` : '';
+                const og = watchOBot === 'hexnet' && generation !== null ? `&og=${generation}` : '';
                 navigate(`/watch?xb=${watchXBot}&x=${watchX}&ob=${watchOBot}&o=${watchO}${xg}${og}`);
               }}
             >
               <Segmented label="X" value={watchXBot} options={botOptions} onChange={(id) => { setWatchXBot(id); setWatchX((l) => fit(id, l)); }} />
-              {watchXBot === 'hexnet' && <GenerationSlider label="X: Six's generation" generations={gens.generations} downloadable={gens.downloadable} newest={gens.newest} value={watchXGen} onChange={setWatchXGen} />}
               <Segmented label={`X: ${levelName(watchXBot)}`} value={watchX} options={levelOptions(watchXBot)} onChange={setWatchX} />
               <Segmented label="O" value={watchOBot} options={botOptions} onChange={(id) => { setWatchOBot(id); setWatchO((l) => fit(id, l)); }} />
-              {watchOBot === 'hexnet' && <GenerationSlider label="O: Six's generation" generations={gens.generations} downloadable={gens.downloadable} newest={gens.newest} value={watchOGen} onChange={setWatchOGen} />}
               <Segmented label={`O: ${levelName(watchOBot)}`} value={watchO} options={levelOptions(watchOBot)} onChange={setWatchO} />
               <p className="notice">SealBot, Strix and the other rival bots join this lineup once the test arena is built.</p>
               <button type="submit" className="button is-primary">Start broadcast</button>

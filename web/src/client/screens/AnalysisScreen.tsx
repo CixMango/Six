@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useParams, useSearch } from 'wouter';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, GraduationCap, Lightbulb, LocateFixed, Minus, PencilLine, Plus, ShieldAlert } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, GraduationCap, LocateFixed, Minus, PencilLine, Plus, Redo2, ShieldAlert, Undo2 } from 'lucide-react';
 import type { Hex } from '../../shared/hex.ts';
 import { Game, otherPlayer, type Player, type Setup } from '../../shared/rules.ts';
 import type { ReplayRecord } from '../../shared/replay.ts';
-import { parseHexoNotation, positionFor, setupFromGame, toHexoNotation } from '../../shared/setup.ts';
+import { looksLikeHexoNotation, parseHexoNotation, positionFor, setupFromGame, toHexoNotation } from '../../shared/setup.ts';
 import { threatWindows } from '../../shared/tactics.ts';
 import type { Evaluation } from '../../shared/winChance.ts';
 import { BoardCanvas, type BoardHandle } from '../board/BoardCanvas.tsx';
@@ -48,7 +48,6 @@ export function AnalysisScreen() {
   const [showThreats, setShowThreats] = useState(true);
   const [editOpen, setEditOpen] = useState(() => !narrow);
   const [tool, setTool] = useState<Tool>('turn');
-  const [picking, setPicking] = useState(false);
   const [suggestion, setSuggestion] = useState<{ key: string; side: Player; cells: Hex[] } | null>(null);
   const [suggesting, setSuggesting] = useState<Player | null>(null);
   const [suggestError, setSuggestError] = useState('');
@@ -63,6 +62,8 @@ export function AnalysisScreen() {
       .replay(id)
       .then((r) => {
         setRecord(r);
+        past.current = [];
+        future.current = [];
         setRadius(r.radius === 8 ? 8 : 9);
         setSetup(r.setup ?? null);
         const moves = r.moves.map(([q, r2]) => ({ q, r: r2 }));
@@ -111,6 +112,20 @@ export function AnalysisScreen() {
     }
   };
 
+  // Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) undo and redo edits, anywhere but a text field.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || (e.target as HTMLElement).closest('input, textarea')) return;
+      const key = e.key.toLowerCase();
+      if (key === 'z' && !e.shiftKey) undo();
+      else if (key === 'y' || (key === 'z' && e.shiftKey)) redo();
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
   // Arrow keys step through the game unless the board or a field has focus.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -120,7 +135,6 @@ export function AnalysisScreen() {
       else if (e.key === 'ArrowRight') go(cursor + 1);
       else if (e.key === 'Home') go(0);
       else if (e.key === 'End') go(line.length);
-      else if (e.key === 'Escape') setPicking(false);
       else return;
       e.preventDefault();
     };
@@ -128,14 +142,40 @@ export function AnalysisScreen() {
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  /** Starts over from `next`: the moves so far become part of the position. */
-  const startFrom = (next: Setup | null, moves: Hex[] = []) => {
-    setSetup(next);
-    setLine(moves);
-    setCursor(moves.length);
+  /** Every edit (a stone, a set-up change, an import) goes through here, so it can be undone. */
+  type Snapshot = { setup: Setup | null; line: Hex[]; cursor: number };
+  const past = useRef<Snapshot[]>([]);
+  const future = useRef<Snapshot[]>([]);
+  const [, setHistoryVersion] = useState(0);
+  const show = (next: Snapshot) => {
+    setSetup(next.setup);
+    setLine(next.line);
+    setCursor(next.cursor);
     setSuggestion(null);
     setVersion((v) => v + 1);
+    setHistoryVersion((v) => v + 1);
   };
+  const commit = (next: Snapshot) => {
+    past.current.push({ setup, line, cursor });
+    if (past.current.length > 500) past.current.shift();
+    future.current = [];
+    show(next);
+  };
+  const undo = () => {
+    const previous = past.current.pop();
+    if (!previous) return;
+    future.current.push({ setup, line, cursor });
+    show(previous);
+  };
+  const redo = () => {
+    const next = future.current.pop();
+    if (!next) return;
+    past.current.push({ setup, line, cursor });
+    show(next);
+  };
+
+  /** Starts over from `next`: the moves so far become part of the position. */
+  const startFrom = (next: Setup | null, moves: Hex[] = []) => commit({ setup: next, line: moves, cursor: moves.length });
 
   // The side to move and stones left, as the controls show them (after a six: the loser's turn).
   const sideToMove: Player = game.winner ? otherPlayer(game.winner) : game.current;
@@ -160,14 +200,10 @@ export function AnalysisScreen() {
   const onPlace = (cell: Hex) => {
     if (game.winner || !game.isPlayable(cell.q, cell.r)) return;
     const next = [...line.slice(0, cursor), cell];
-    setLine(next);
-    setCursor(next.length);
-    setSuggestion(null);
-    setVersion((v) => v + 1);
+    commit({ setup, line: next, cursor: next.length });
   };
 
   const suggest = async (side: Player) => {
-    setPicking(false);
     setSuggestError('');
     setSuggesting(side);
     const key = positionKey;
@@ -196,22 +232,26 @@ export function AnalysisScreen() {
     }
     if (pos.setup === setup) {
       const next = [...line.slice(0, cursor), ...legal];
-      setLine(next);
-      setCursor(next.length);
-      setSuggestion(null);
-      setVersion((v) => v + 1);
+      commit({ setup, line: next, cursor: next.length });
     } else {
       // Not that side's turn: the position is set up with them to move, then their stones are played.
       startFrom(pos.setup, legal);
     }
   };
 
-  const loadPasted = () => {
+  /** A HeXO position loads here; games (HeXO links, HTTTX, replay files) are saved and open as their own replay. */
+  const loadPasted = async () => {
+    const text = pasted.trim();
+    setPasteError('');
     try {
-      startFrom(parseHexoNotation(pasted));
+      if (looksLikeHexoNotation(text)) {
+        startFrom(parseHexoNotation(text));
+        setTimeout(() => board.current?.recenter(), 0);
+      } else {
+        const opened = await api.importGame(text);
+        navigate(`/analysis/${opened.split('/').pop()}`);
+      }
       setPasted('');
-      setPasteError('');
-      setTimeout(() => board.current?.recenter(), 0);
     } catch (e) {
       setPasteError((e as Error).message);
     }
@@ -332,6 +372,23 @@ export function AnalysisScreen() {
               onChange={(left) => setTurn(sideToMove, left)}
             />
           </div>
+          <div className="edit-panel-analyze" role="group" aria-label="Six's best turn">
+            {(['O', 'X'] as Player[]).map((p) => {
+              const blue = (p === 'O') !== Boolean(record?.swapColors);
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  className={`button analyze-button is-${p.toLowerCase()}`}
+                  onClick={() => suggest(p)}
+                  disabled={Boolean(suggesting) || Boolean(game.winner)}
+                  title={`Six's best turn for ${names[p]}${p === game.current && !game.winner ? ' (to move)' : ''}`}
+                >
+                  {suggesting === p ? 'Thinking...' : `Analyze ${blue ? 'Blue' : 'Yellow'}`}
+                </button>
+              );
+            })}
+          </div>
           <form
             className="edit-panel-paste"
             onSubmit={(e) => {
@@ -339,7 +396,7 @@ export function AnalysisScreen() {
               loadPasted();
             }}
           >
-            <label className="field-label" htmlFor="paste-position">HeXO position</label>
+            <label className="field-label" htmlFor="paste-position">Import a game or position</label>
             <div className="edit-panel-paste-row">
               <input
                 id="paste-position"
@@ -349,7 +406,7 @@ export function AnalysisScreen() {
                   setPasted(e.target.value);
                   setPasteError('');
                 }}
-                placeholder="-xxo/.xxo3x, d @(4, 5) x A0 A1"
+                placeholder="HeXO link or position, HTTTX, replay"
                 spellCheck={false}
                 autoComplete="off"
               />
@@ -418,48 +475,20 @@ export function AnalysisScreen() {
           <button
             type="button"
             className="button is-quiet"
-            onClick={() => {
-              setSetup(record?.setup ?? null);
-              setLine(original!);
-              setCursor(Math.min(cursor, original!.length));
-              setSuggestion(null);
-              setVersion((v) => v + 1);
-            }}
+            onClick={() => commit({ setup: record?.setup ?? null, line: original!, cursor: Math.min(cursor, original!.length) })}
           >
             Back to the game
           </button>
         )}
       </section>
 
-      {picking && (
-        <div className="suggest-pick plate" role="group" aria-label="Suggest a turn for">
-          <p className="suggest-pick-label caps">Suggest a turn for</p>
-          <div className="suggest-pick-row">
-            {(['X', 'O'] as Player[]).map((p) => (
-              <button key={p} type="button" className={`suggest-side is-${p.toLowerCase()}`} onClick={() => suggest(p)}>
-                <span className="sb-letter" aria-hidden="true">{p}</span>
-                <span className="suggest-side-name">
-                  {names[p]}
-                  {p === game.current && !game.winner && <span className="suggest-side-note">to move</span>}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       <Dock
         actions={[
           ...(record && !record.setup ? [{ icon: GraduationCap, label: 'Review with coach', onClick: () => navigate(`/review/${record.id}`) }] : []),
           { icon: PencilLine, label: editOpen ? 'Hide board editing' : 'Edit the board', onClick: () => setEditOpen((o) => !o), pressed: editOpen },
           { icon: ShieldAlert, label: showThreats ? 'Hide threats' : 'Show threats', onClick: () => setShowThreats((s) => !s), pressed: showThreats },
-          {
-            icon: Lightbulb,
-            label: suggesting ? 'Six is thinking' : 'Suggest a turn',
-            onClick: () => setPicking((p) => !p),
-            pressed: picking,
-            disabled: Boolean(suggesting) || Boolean(game.winner),
-          },
+          { icon: Undo2, label: 'Undo (Ctrl+Z)', onClick: undo, disabled: past.current.length === 0 },
+          { icon: Redo2, label: 'Redo (Ctrl+Y)', onClick: redo, disabled: future.current.length === 0 },
           { icon: LocateFixed, label: 'Recenter on the stones', onClick: () => board.current?.recenter() },
           { icon: Minus, label: 'Zoom out', onClick: () => board.current?.zoomBy(0.8) },
           { icon: Plus, label: 'Zoom in', onClick: () => board.current?.zoomBy(1.25) },

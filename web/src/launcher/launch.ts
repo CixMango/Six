@@ -36,11 +36,14 @@ function note(line: string): void {
   }
 }
 
-function openBrowser(): void {
+/** Six itself, or (`target` a file) the loading page, which switches to Six once the server answers. */
+function openBrowser(target: string = HOME): void {
   if (process.env.SIX_NO_BROWSER) return; // tests
-  const [cmd, args] = windows ? ['cmd', ['/c', 'start', '', HOME]] : [mac ? 'open' : 'xdg-open', [HOME]];
+  const [cmd, args] = windows ? ['cmd', ['/c', 'start', '', target]] : [mac ? 'open' : 'xdg-open', [target]];
   spawn(cmd, args, { stdio: 'ignore', detached: true, windowsHide: true }).unref();
 }
+
+const LOADING = path.join(WEB, 'loading.html');
 
 /** A message box, since there's no window to print to. */
 function tell(message: string): void {
@@ -150,6 +153,9 @@ function logFile(): number {
 }
 
 async function serve(openWhenReady: boolean): Promise<void> {
+  // The page appears at once (a loading screen) instead of after the server's 5 to 10 seconds of starting.
+  const loading = openWhenReady && existsSync(LOADING);
+  if (loading) openBrowser(LOADING);
   const out = logFile();
   const started = Date.now();
   // The version comes from version.json each start, so after an update the new server reports the new one.
@@ -170,7 +176,7 @@ async function serve(openWhenReady: boolean): Promise<void> {
     if (code && Date.now() - started < 15_000) tell(`Six couldn't start. What went wrong is written in ${LOG}`);
     process.exit(code ?? 0);
   });
-  if (openWhenReady && (await waitFor(up, 60_000))) openBrowser();
+  if (openWhenReady && !loading && (await waitFor(up, 60_000))) openBrowser();
 }
 
 /**

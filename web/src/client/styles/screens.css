@@ -1904,73 +1904,6 @@
   }
 }
 
-/* ---------- Analysis board: whose turn to suggest ---------- */
-.suggest-pick {
-  position: absolute;
-  z-index: 4;
-  right: max(var(--space-4), env(safe-area-inset-right));
-  bottom: calc(max(var(--space-4), env(safe-area-inset-bottom)) + 56px);
-  display: grid;
-  gap: var(--space-2);
-  width: min(300px, calc(100vw - 2 * var(--edge)));
-  padding: var(--space-3);
-  animation: wipe-up var(--dur) var(--ease-out) both;
-}
-
-.suggest-pick-label {
-  margin: 0;
-  color: var(--text-2);
-  font-size: var(--step--1);
-}
-
-.suggest-pick-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
-}
-
-.suggest-side {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 48px;
-  padding: var(--space-2);
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius);
-  background: var(--ground-2);
-  color: var(--text);
-  text-align: left;
-  transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
-}
-
-.suggest-side.is-x:hover {
-  border-color: var(--x);
-  background: var(--x-wash);
-}
-
-.suggest-side.is-o:hover {
-  border-color: var(--o);
-  background: var(--o-wash);
-}
-
-.suggest-side:focus-visible {
-  outline: 2px solid var(--text);
-  outline-offset: 1px;
-}
-
-.suggest-side-name {
-  display: grid;
-  min-width: 0;
-  font-weight: 600;
-  font-size: var(--step--1);
-  overflow-wrap: anywhere;
-}
-
-.suggest-side-note {
-  color: var(--text-2);
-  font-weight: 500;
-  font-size: var(--step--2);
-}
 
 /* The thinking meter takes the row under the channel bug; the edit panel moves down while it shows. */
 .analysis:has(.think-meter) .edit-panel {
@@ -2013,4 +1946,33 @@
     animation: none;
     opacity: 0.5;
   }
+}
+
+/* Six's best turn for either side, in that side's colour. */
+.edit-panel-analyze {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.analyze-button {
+  font-weight: 700;
+}
+
+.analyze-button.is-x {
+  background: var(--x);
+  color: var(--x-ink);
+}
+
+.analyze-button.is-o {
+  background: var(--o);
+  color: var(--o-ink);
+}
+
+.analyze-button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.analyze-button:disabled {
+  opacity: 0.55;
 }

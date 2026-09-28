@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useThinkBy } from '../client/lib/thinkBy.ts';
-import { levelLabel, referenceTime, thinksByPositions, type ThinkBy } from '../shared/thinking.ts';
+import { levelLabel, thinksByPositions, type ThinkBy } from '../shared/thinking.ts';
 import { GameImport } from '../client/components/GameImport.tsx';
 import { parseGameText } from '../shared/gameImport.ts';
 import { reviewInBrowser } from '../client/screens/ReviewScreen.tsx';
@@ -191,9 +191,6 @@ export function PlayHome() {
             <>
               <Segmented label="Your side" value={side} options={SIDE_OPTIONS} onChange={setSide} />
               <Segmented label={`Six's ${levelName('hexweb', think)}`} value={level} options={levelOptions('hexweb', think)} onChange={setLevel} />
-              {thinksByPositions('hexweb', think) && (
-                <p className="notice">As strong as {referenceTime(level)} of thinking on a fast PC, on any computer; slower ones take longer. Change this in Settings.</p>
-              )}
             </>
           ) : (
             <>

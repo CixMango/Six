@@ -33,6 +33,8 @@ export interface BoardMark {
   player: Player;
   /** threat: dashed hex one turn from six. ghost: faint suggested stone. played/better: review marks. */
   kind: 'threat' | 'ghost' | 'played' | 'better';
+  /** Written on a ghost stone, e.g. the turn it belongs to in a follow-up line. */
+  label?: string;
 }
 
 export interface FrameInput {
@@ -395,6 +397,18 @@ export class BoardRenderer {
         ctx.fillStyle = color.core;
         ctx.fill(ghost);
         ctx.globalAlpha = 1;
+        if (mark.label) {
+          // Drawn in screen pixels so the text stays crisp at any zoom.
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.scale(1 / z, 1 / z);
+          ctx.font = `800 ${Math.max(9, Math.round(z * 0.62))}px "Archivo Variable", system-ui, sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = 'rgba(8, 10, 18, 0.92)';
+          ctx.fillText(mark.label, 0, Math.round(z * 0.04));
+          ctx.restore();
+        }
       }
     }
 

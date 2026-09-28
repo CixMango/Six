@@ -113,6 +113,8 @@ await build({
   target: 'node24',
   logLevel: 'warning',
 });
+// Shown the moment Six is opened, until the server is up.
+cpSync(path.join(web, 'loading.html'), path.join(out, 'web/loading.html'));
 const asset = platform.archive.slice(`Six-${version}-`.length);
 writeFileSync(path.join(out, 'web/version.json'), `${JSON.stringify({ version, asset })}\n`);
 

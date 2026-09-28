@@ -219,8 +219,7 @@ export function SoundCheck() {
   };
   return (
     <div className="sound-check-pair">
-      <VolumeRow label="Blunder sound: you hear it at" value={settings.host} onChange={change('host')} />
-      <VolumeRow label="Your friend hears it at" value={settings.friend} onChange={change('friend')} />
+      <VolumeRow label="Blunder sound volume" value={settings.host} onChange={change('host')} />
     </div>
   );
 }

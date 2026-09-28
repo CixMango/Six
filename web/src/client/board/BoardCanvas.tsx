@@ -237,12 +237,15 @@ export function BoardCanvas({ game, version, interactive, onPlace, marks = [], l
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    // Left button: click to place, drag to pan. Right or middle button: pan only.
+    const panOnly = e.pointerType === 'mouse' && (e.button === 1 || e.button === 2);
+    if (e.button !== 0 && e.pointerType === 'mouse' && !panOnly) return;
+    if (e.button === 1) e.preventDefault(); // no autoscroll
     canvasRef.current!.setPointerCapture(e.pointerId);
     const p = local(e);
     pointers.current.set(e.pointerId, p);
     focus.current = null;
-    if (pointers.current.size === 1) gesture.current = { startX: p.x, startY: p.y, dragged: false, pinch: null };
+    if (pointers.current.size === 1) gesture.current = { startX: p.x, startY: p.y, dragged: panOnly, pinch: null };
     else if (pointers.current.size === 2) {
       const [a, b] = [...pointers.current.values()];
       gesture.current.pinch = Math.hypot(a!.x - b!.x, a!.y - b!.y);
@@ -357,11 +360,15 @@ export function BoardCanvas({ game, version, interactive, onPlace, marks = [], l
         className="board-canvas"
         tabIndex={0}
         role="application"
-        aria-label={`${label}. Drag to pan, scroll to zoom. Arrow keys move the cursor, Enter places a stone, C recenters.`}
+        aria-label={`${label}. Drag (or hold the right or middle button) to pan, scroll to zoom. Arrow keys move the cursor, Enter places a stone, C recenters.`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onContextMenu={(e) => e.preventDefault()}
+        onMouseDown={(e) => {
+          if (e.button === 1) e.preventDefault();
+        }}
         onPointerLeave={(e) => {
           if (e.pointerType === 'mouse' && hover.current) {
             hover.current = null;

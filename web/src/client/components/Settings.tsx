@@ -2,6 +2,8 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Settings as Gear, X } from 'lucide-react';
 import { Segmented, SoundCheck } from './Broadcast.tsx';
 import { api } from '../lib/api.ts';
+import { useGeneration } from '../lib/generation.ts';
+import { GenerationSlider } from './GenerationSlider.tsx';
 import { useAutoCamera } from '../lib/autoCamera.ts';
 import { useThinkBy } from '../lib/thinkBy.ts';
 import { useBlunderMode } from '../lib/blunderMode.ts';
@@ -18,6 +20,8 @@ export function SettingsButton() {
   const [thinking, setThinking] = useThinkBy();
   const titleId = useId();
   const [canQuit, setCanQuit] = useState(false);
+  const [generation, setGeneration] = useGeneration();
+  const [gens, setGens] = useState<{ generations: number[]; downloadable?: number[]; newest: number | null } | null>(null);
   const [stopped, setStopped] = useState(false);
   const [shortcut, setShortcut] = useState('');
 
@@ -25,6 +29,8 @@ export function SettingsButton() {
   useEffect(() => {
     if (!open) return;
     api.info().then((i) => setCanQuit(Boolean(i.canQuit))).catch(() => setCanQuit(false));
+    // The app's own networks; the website has none to choose from.
+    api.generations().then(setGens).catch(() => setGens(null));
   }, [open]);
 
   useEffect(() => {
@@ -83,6 +89,20 @@ export function SettingsButton() {
             </p>
             {blunderMode && <SoundCheck />}
           </section>
+
+          {gens && gens.generations.length > 1 && (
+            <section className="settings-section">
+              <GenerationSlider
+                label="Six's generation"
+                generations={gens.generations}
+                downloadable={gens.downloadable}
+                newest={gens.newest}
+                value={generation}
+                onChange={setGeneration}
+              />
+              <p className="settings-note">Which of Six's trained networks you play against. Older ones are weaker; the newest is the default.</p>
+            </section>
+          )}
 
           <section className="settings-section">
             <Segmented

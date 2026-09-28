@@ -13,9 +13,10 @@ const data = path.join(root, 'data');
 const log = path.join(data, 'six.log');
 const windows = process.platform === 'win32';
 
-function openBrowser() {
+/** Six itself, or (`target` a file) the loading page, which switches to Six once the server answers. */
+function openBrowser(target = home) {
   if (process.env.SIX_NO_BROWSER) return;
-  const [cmd, args] = windows ? ['cmd', ['/c', 'start', '', home]] : [process.platform === 'darwin' ? 'open' : 'xdg-open', [home]];
+  const [cmd, args] = windows ? ['cmd', ['/c', 'start', '', target]] : [process.platform === 'darwin' ? 'open' : 'xdg-open', [target]];
   spawn(cmd, args, { stdio: 'ignore', detached: true, windowsHide: true }).unref();
 }
 
@@ -31,6 +32,11 @@ if (await up()) {
   openBrowser();
   process.exit(0);
 }
+
+// A loading screen straight away: building the page and starting the server take a while.
+const loading = path.join(web, 'loading.html');
+const showsLoading = existsSync(loading);
+if (showsLoading) openBrowser(loading);
 
 mkdirSync(data, { recursive: true });
 const out = openSync(log, 'a');
@@ -50,7 +56,7 @@ const server = spawn(process.execPath, [tsx, 'src/server/main.ts', '--prod'], {
 });
 closeSync(out);
 server.on('exit', (code) => process.exit(code ?? 0));
-for (let i = 0; i < 120; i++) {
+for (let i = 0; i < 120 && !showsLoading; i++) {
   if (await up()) {
     openBrowser();
     break;

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Starting Six</title>
+<!-- Opened straight away by the launcher while the server starts; switches to Six once it answers. -->
+<style>
+  :root {
+    color-scheme: dark;
+    --ground: #0a0d14;
+    --text: #eef1f6;
+    --text-2: #9aa3b5;
+    --x: #f7cf45;
+    --o: #86cff5;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: grid;
+    place-items: center;
+    background: radial-gradient(ellipse at 50% 38%, #151b28 0%, var(--ground) 62%);
+    color: var(--text);
+    font-family: "Archivo", "Segoe UI", system-ui, sans-serif;
+  }
+  main { display: grid; justify-items: center; gap: 22px; padding: 24px; text-align: center; }
+  img { width: 112px; height: 112px; filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.5)); }
+  h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; }
+  p { margin: 0; max-width: 36ch; color: var(--text-2); font-size: 14px; line-height: 1.5; }
+  .bar { position: relative; width: 220px; height: 3px; overflow: hidden; border-radius: 2px; background: #1c2333; }
+  .bar span {
+    position: absolute; inset: 0 auto 0 0; width: 38%;
+    background: linear-gradient(90deg, var(--o), var(--x));
+    animation: sweep 1.3s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  }
+  @keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(270%); } }
+  @media (prefers-reduced-motion: reduce) { .bar span { animation: none; width: 100%; opacity: 0.5; } }
+</style>
+</head>
+<body>
+<main>
+  <img src="dist/client/brand/six-mark.svg" alt="">
+  <h1>Starting Six</h1>
+  <div class="bar" aria-hidden="true"><span></span></div>
+  <p id="note" role="status">This takes a few seconds. The page opens by itself when Six is ready.</p>
+</main>
+<script>
+  const port = Number(new URLSearchParams(location.search).get('port')) || 6600;
+  const home = 'http://localhost:' + port + '/';
+  const started = Date.now();
+  // An image loads across origins without special headers, so it tells when the server answers.
+  function check() {
+    const probe = new Image();
+    probe.onload = () => location.replace(home);
+    probe.onerror = () => {
+      if (Date.now() - started > 60000) {
+        document.getElementById('note').textContent =
+          'This is taking longer than usual. If nothing happens, open Six again; what went wrong is written in data/six.log in Six\'s folder.';
+      }
+      setTimeout(check, 500);
+    };
+    probe.src = home + 'favicon.svg?t=' + Date.now();
+  }
+  check();
+</script>
+</body>
+</html>
